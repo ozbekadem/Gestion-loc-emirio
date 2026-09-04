@@ -4,9 +4,10 @@ import { Card, PageHeader, Button, Modal, Field, Input, Select, EmptyState, Badg
 import { formatDate } from '../lib/utils.js'
 
 const STATUTS = [
-  { value: 'bon_payeur', label: 'Bon payeur', tone: 'green' },
-  { value: 'retard', label: 'En retard', tone: 'red' },
-  { value: 'nouveau', label: 'Nouveau', tone: 'blue' },
+  { value: 'excellent_payeur', label: 'Excellent payeur', tone: 'green' },
+  { value: 'bon_payeur', label: 'Bon payeur', tone: 'blue' },
+  { value: 'mauvais_payeur', label: 'Mauvais payeur', tone: 'red' },
+  { value: 'nouveau', label: 'Nouveau', tone: 'slate' },
 ]
 
 const emptyLocataire = { nom: '', prenom: '', email: '', telephone: '', bienId: '', dateEntree: '', statut: 'nouveau' }
@@ -41,7 +42,7 @@ export default function Locataires() {
   }
 
   function statutInfo(v) {
-    return STATUTS.find((s) => s.value === v) || STATUTS[2]
+    return STATUTS.find((s) => s.value === v) || STATUTS[3]
   }
 
   return (

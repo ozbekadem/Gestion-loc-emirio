@@ -24,3 +24,14 @@ export function labelMois(moisKey) {
   const [annee, mois] = moisKey.split('-').map(Number)
   return `${MOIS_FR[mois - 1]} ${annee}`
 }
+
+export const STATUTS_PAIEMENT = [
+  { value: 'paye', label: 'Payé', tone: 'green', cellClass: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' },
+  { value: 'partiel', label: 'Partiel', tone: 'amber', cellClass: 'bg-amber-100 text-amber-800 hover:bg-amber-200' },
+  { value: 'retard', label: 'Retard', tone: 'red', cellClass: 'bg-red-100 text-red-800 hover:bg-red-200' },
+  { value: 'attendu', label: 'Attendu', tone: 'slate', cellClass: 'bg-slate-50 text-slate-400 hover:bg-slate-100' },
+]
+
+export function statutPaiementInfo(value) {
+  return STATUTS_PAIEMENT.find((s) => s.value === value) || STATUTS_PAIEMENT[3]
+}

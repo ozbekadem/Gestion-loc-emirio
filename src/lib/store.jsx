@@ -4,7 +4,7 @@ import { seedData } from '../data/seed.js'
 
 const STORAGE_KEY = 'emirio-gestion-loc-data'
 
-const COLLECTIONS = [
+export const COLLECTIONS = [
   'immeubles',
   'biens',
   'locataires',
@@ -14,6 +14,8 @@ const COLLECTIONS = [
   'prestataires',
   'candidatures',
   'agenda',
+  'sinistres',
+  'messages',
 ]
 
 function loadInitialState() {
@@ -54,6 +56,11 @@ function reducer(state, action) {
     case 'RESET_DEMO': {
       return seedData()
     }
+    case 'IMPORT_STATE': {
+      const next = {}
+      for (const c of COLLECTIONS) next[c] = Array.isArray(action.data[c]) ? action.data[c] : state[c]
+      return next
+    }
     default:
       return state
   }
@@ -78,6 +85,7 @@ export function StoreProvider({ children }) {
       }
     }
     actions.resetDemo = () => dispatch({ type: 'RESET_DEMO' })
+    actions.importState = (data) => dispatch({ type: 'IMPORT_STATE', data })
     return actions
   }, [])
 

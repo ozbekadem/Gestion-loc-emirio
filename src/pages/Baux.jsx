@@ -9,8 +9,28 @@ const STATUTS = [
   { value: 'resilie', label: 'Résilié', tone: 'red' },
 ]
 
+const FREQUENCES = [
+  { value: 'mensuel', label: 'Mensuel' },
+  { value: 'bimensuel', label: 'Bimensuel' },
+  { value: 'trimestriel', label: 'Trimestriel' },
+  { value: 'hebdomadaire', label: 'Hebdomadaire' },
+]
+
+function labelFrequence(v) {
+  return FREQUENCES.find((f) => f.value === v)?.label || 'Mensuel'
+}
+
 const emptyBail = {
   locataireId: '', bienId: '', dateDebut: '', dateFin: '', loyer: '', charges: '', depotGarantie: '', statut: 'actif',
+  frequence: 'mensuel', loyerInitial: '', indiceInitial: '', indiceActuel: '', dateIndexation: '',
+}
+
+function loyerIndexe(values) {
+  const initial = Number(values.loyerInitial)
+  const iInitial = Number(values.indiceInitial)
+  const iActuel = Number(values.indiceActuel)
+  if (!initial || !iInitial || !iActuel) return null
+  return Math.round((initial * iActuel) / iInitial * 100) / 100
 }
 
 export default function Baux() {
@@ -26,7 +46,15 @@ export default function Baux() {
   function save(e) {
     e.preventDefault()
     const { mode, id, values } = modal
-    const payload = { ...values, loyer: Number(values.loyer) || 0, charges: Number(values.charges) || 0, depotGarantie: Number(values.depotGarantie) || 0 }
+    const payload = {
+      ...values,
+      loyer: Number(values.loyer) || 0,
+      charges: Number(values.charges) || 0,
+      depotGarantie: Number(values.depotGarantie) || 0,
+      loyerInitial: values.loyerInitial === '' ? Number(values.loyer) || 0 : Number(values.loyerInitial),
+      indiceInitial: values.indiceInitial === '' ? '' : Number(values.indiceInitial),
+      indiceActuel: values.indiceActuel === '' ? '' : Number(values.indiceActuel),
+    }
     if (mode === 'create') baux.add(payload)
     else baux.update(id, payload)
     setModal(null)
@@ -64,6 +92,7 @@ export default function Baux() {
                   <th className="pb-2 pr-4">Début</th>
                   <th className="pb-2 pr-4">Fin</th>
                   <th className="pb-2 pr-4">Loyer + charges</th>
+                  <th className="pb-2 pr-4">Fréquence</th>
                   <th className="pb-2 pr-4">Statut</th>
                   <th className="pb-2"></th>
                 </tr>
@@ -80,6 +109,7 @@ export default function Baux() {
                       <td className="py-2 pr-4 text-slate-600">{formatDate(b.dateDebut)}</td>
                       <td className="py-2 pr-4 text-slate-600">{formatDate(b.dateFin)}</td>
                       <td className="py-2 pr-4 text-slate-600">{formatMontant(Number(b.loyer) + Number(b.charges))}</td>
+                      <td className="py-2 pr-4 text-slate-600">{labelFrequence(b.frequence)}</td>
                       <td className="py-2 pr-4"><Badge tone={info.tone}>{info.label}</Badge></td>
                       <td className="py-2 text-right">
                         <Button variant="ghost" onClick={() => openEdit(b)}>Modifier</Button>
@@ -141,11 +171,48 @@ export default function Baux() {
                 <Input type="number" min="0" value={modal.values.depotGarantie} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, depotGarantie: e.target.value } }))} />
               </Field>
             </div>
-            <Field label="Statut">
-              <Select value={modal.values.statut} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, statut: e.target.value } }))}>
-                {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </Select>
-            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Fréquence de paiement">
+                <Select value={modal.values.frequence} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, frequence: e.target.value } }))}>
+                  {FREQUENCES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </Select>
+              </Field>
+              <Field label="Statut">
+                <Select value={modal.values.statut} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, statut: e.target.value } }))}>
+                  {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </Select>
+              </Field>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 p-3">
+              <p className="mb-3 text-sm font-semibold text-slate-700">Indexation du loyer</p>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Loyer initial (€)">
+                  <Input type="number" min="0" placeholder={modal.values.loyer || '0'} value={modal.values.loyerInitial} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, loyerInitial: e.target.value } }))} />
+                </Field>
+                <Field label="Date d'indexation">
+                  <Input type="date" value={modal.values.dateIndexation} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, dateIndexation: e.target.value } }))} />
+                </Field>
+                <Field label="Indice de référence initial">
+                  <Input type="number" step="0.01" min="0" value={modal.values.indiceInitial} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, indiceInitial: e.target.value } }))} />
+                </Field>
+                <Field label="Indice actuel">
+                  <Input type="number" step="0.01" min="0" value={modal.values.indiceActuel} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, indiceActuel: e.target.value } }))} />
+                </Field>
+              </div>
+              {loyerIndexe(modal.values) !== null && (
+                <div className="mt-3 flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-sm">
+                  <span className="text-slate-600">Loyer indexé calculé : <strong className="text-slate-900">{formatMontant(loyerIndexe(modal.values))}</strong></span>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setModal((m) => ({ ...m, values: { ...m.values, loyer: String(loyerIndexe(m.values)) } }))}
+                  >
+                    Appliquer au loyer
+                  </Button>
+                </div>
+              )}
+            </div>
           </form>
         )}
       </Modal>

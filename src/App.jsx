@@ -11,6 +11,9 @@ import Candidatures from './pages/Candidatures.jsx'
 import Agenda from './pages/Agenda.jsx'
 import Documents from './pages/Documents.jsx'
 import Comptabilite from './pages/Comptabilite.jsx'
+import Sinistres from './pages/Sinistres.jsx'
+import Messagerie from './pages/Messagerie.jsx'
+import Parametres from './pages/Parametres.jsx'
 
 const NAV = [
   { id: 'dashboard', label: 'Tableau de bord', icon: '🏠', Component: Dashboard },
@@ -21,9 +24,12 @@ const NAV = [
   { id: 'travaux', label: 'Travaux', icon: '🛠️', Component: Travaux },
   { id: 'prestataires', label: 'Prestataires', icon: '📇', Component: Prestataires },
   { id: 'candidatures', label: 'Candidatures', icon: '📥', Component: Candidatures },
+  { id: 'sinistres', label: 'Sinistres', icon: '🛡️', Component: Sinistres },
+  { id: 'messagerie', label: 'Messagerie', icon: '💬', Component: Messagerie },
   { id: 'agenda', label: 'Agenda', icon: '📅', Component: Agenda },
   { id: 'documents', label: 'Documents', icon: '🧾', Component: Documents },
   { id: 'comptabilite', label: 'Comptabilité', icon: '📊', Component: Comptabilite },
+  { id: 'parametres', label: 'Paramètres', icon: '⚙️', Component: Parametres },
 ]
 
 export default function App() {

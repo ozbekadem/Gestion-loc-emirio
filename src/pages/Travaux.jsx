@@ -9,8 +9,20 @@ const STATUTS = [
   { value: 'termine', label: 'Terminé', tone: 'green' },
 ]
 
+const CATEGORIES = [
+  'Plomberie', 'Électricité', 'Chauffage', 'Gaz', 'Menuiserie', 'Peinture', 'Carrelage',
+  'Serrurerie', 'Vitrerie', 'Toiture', 'Isolation', 'Nettoyage', 'Jardinage', 'Entretien',
+  'Gros travaux', 'Autre',
+]
+
+const URGENCES = [
+  { value: 'normale', label: 'Normale' },
+  { value: 'urgente', label: 'Urgente' },
+]
+
 const emptyTravail = {
   immeubleId: '', bienId: '', titre: '', description: '', prestataireId: '', statut: 'a_planifier', cout: '', date: '',
+  categorie: CATEGORIES[0], urgence: 'normale',
 }
 
 export default function Travaux() {
@@ -71,8 +83,12 @@ export default function Travaux() {
               <Card key={t.id}>
                 <div className="flex items-start justify-between">
                   <h3 className="font-semibold text-slate-900">{t.titre}</h3>
-                  <Badge tone={info.tone}>{info.label}</Badge>
+                  <div className="flex gap-1.5">
+                    {t.urgence === 'urgente' && <Badge tone="red">Urgente</Badge>}
+                    <Badge tone={info.tone}>{info.label}</Badge>
+                  </div>
                 </div>
+                {t.categorie && <p className="mt-0.5 text-xs uppercase tracking-wide text-slate-400">{t.categorie}</p>}
                 {t.description && <p className="mt-1 text-sm text-slate-500">{t.description}</p>}
                 <div className="mt-3 space-y-0.5 text-sm text-slate-600">
                   <p>{immeuble ? immeuble.nom : '—'}{bien ? ` — ${bien.nom}` : ''}</p>
@@ -109,6 +125,18 @@ export default function Travaux() {
             <Field label="Description">
               <Textarea value={modal.values.description} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, description: e.target.value } }))} />
             </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Catégorie">
+                <Select value={modal.values.categorie} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, categorie: e.target.value } }))}>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </Select>
+              </Field>
+              <Field label="Urgence">
+                <Select value={modal.values.urgence} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, urgence: e.target.value } }))}>
+                  {URGENCES.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+                </Select>
+              </Field>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Immeuble">
                 <Select value={modal.values.immeubleId} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, immeubleId: e.target.value, bienId: '' } }))}>

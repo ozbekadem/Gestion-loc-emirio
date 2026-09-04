@@ -7,20 +7,24 @@ import { formatMontant, formatDate, moisCourant } from '../lib/utils.js'
 export default function Dashboard() {
   const { state } = useStore()
   const goto = useNavigate()
-  const { immeubles, locataires, baux, paiements, travaux, candidatures } = state
+  const { immeubles, biens, locataires, baux, paiements, travaux, candidatures } = state
   const mois = moisCourant()
 
   const kpis = useMemo(() => {
     const bauxActifs = baux.filter((b) => b.statut === 'actif')
     const attendu = bauxActifs.reduce((sum, b) => sum + Number(b.loyer || 0) + Number(b.charges || 0), 0)
-    const encaisse = paiements
-      .filter((p) => p.mois === mois && p.statut === 'paye')
+    const paiementsMois = paiements.filter((p) => p.mois === mois)
+    const encaisse = paiementsMois
+      .filter((p) => p.statut === 'paye' || p.statut === 'partiel')
       .reduce((sum, p) => sum + Number(p.montantPaye || 0), 0)
-    const locatairesRetard = locataires.filter((l) => l.statut === 'retard').length
+    const locatairesRetard = paiementsMois.filter((p) => p.statut === 'retard').length
     const travauxEnCours = travaux.filter((t) => t.statut !== 'termine').length
     const candidaturesEnAttente = candidatures.filter((c) => c.statut !== 'refusee' && c.statut !== 'acceptee').length
-    return { attendu, encaisse, locatairesRetard, travauxEnCours, candidaturesEnAttente, bauxActifs: bauxActifs.length }
-  }, [baux, paiements, locataires, travaux, candidatures, mois])
+    const biensOccupes = biens.filter((b) => locataires.some((l) => l.bienId === b.id)).length
+    const tauxOccupation = biens.length ? Math.round((biensOccupes / biens.length) * 100) : 0
+    const tauxRecouvrement = attendu ? Math.round((encaisse / attendu) * 100) : 0
+    return { attendu, encaisse, locatairesRetard, travauxEnCours, candidaturesEnAttente, bauxActifs: bauxActifs.length, tauxOccupation, tauxRecouvrement }
+  }, [baux, paiements, biens, locataires, travaux, candidatures, mois])
 
   const prochainesEcheances = useMemo(
     () =>
@@ -47,6 +51,8 @@ export default function Dashboard() {
         <StatCard label="Travaux en cours" value={kpis.travauxEnCours} tone="amber" />
         <StatCard label="Candidatures en attente" value={kpis.candidaturesEnAttente} tone="blue" />
         <StatCard label="Baux actifs" value={kpis.bauxActifs} />
+        <StatCard label="Taux d'occupation" value={`${kpis.tauxOccupation}%`} tone="blue" />
+        <StatCard label="Taux de recouvrement (mois)" value={`${kpis.tauxRecouvrement}%`} tone={kpis.tauxRecouvrement >= 90 ? 'green' : 'amber'} />
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
