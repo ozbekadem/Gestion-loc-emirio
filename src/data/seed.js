@@ -138,6 +138,27 @@ export function seedData() {
         }
       }
 
+      // Encaissements de septembre 2026 (mois courant) saisis pour la Résidence Le Parc,
+      // pour illustrer un suivi réel : deux loyers réglés, un partiel, un impayé.
+      if (immIndex === 0) {
+        const montantAttendu = loyerBase + charges
+        const scenarioSeptembre = [
+          { statut: 'paye', montantPaye: montantAttendu, datePaiement: '2026-09-02' }, // Sophie Bernard
+          { statut: 'paye', montantPaye: montantAttendu, datePaiement: '2026-09-03' }, // Karim Ahmed
+          { statut: 'partiel', montantPaye: 400, datePaiement: '2026-09-04' }, // Julie Dupuis
+          { statut: 'retard', montantPaye: 0, datePaiement: '' }, // Marc Lambert
+        ][unite]
+        paiements.push({
+          id: makeId(),
+          bailId,
+          mois: '2026-09',
+          montantAttendu,
+          montantPaye: scenarioSeptembre.montantPaye,
+          datePaiement: scenarioSeptembre.datePaiement,
+          statut: scenarioSeptembre.statut,
+        })
+      }
+
       // Dossier locataire complet pour le tout premier exemple (Sophie Bernard)
       if (locIndex === 0) {
         documents.push({
@@ -235,6 +256,66 @@ export function seedData() {
         sujet: 'Rappel de loyer — Juillet 2026',
         contenu: `Bonjour ${locataires[7].prenom}, nous n'avons pas encore reçu le paiement du loyer de juillet. Merci de régulariser dans les meilleurs délais.`,
         date: '2026-08-05',
+        sens: 'envoye',
+      },
+      // Courriers rédigés pour la Résidence Le Parc suite à l'encaissement de septembre 2026.
+      // Brouillons archivés dans l'application : aucun envoi réel (e-mail/poste) n'est effectué.
+      {
+        id: makeId(),
+        locataireId: locataires[2].id,
+        destinataire: 'locataire',
+        canal: 'courrier',
+        sujet: 'Rappel — Solde du loyer de septembre 2026',
+        contenu: [
+          `${immeubles[0].nom}`,
+          `${immeubles[0].adresse}, ${immeubles[0].codePostal} ${immeubles[0].ville}`,
+          '',
+          `Charleroi, le 5 septembre 2026`,
+          '',
+          `Objet : Solde du loyer de septembre 2026 — ${biens[2].nom}`,
+          '',
+          `Madame ${locataires[2].nom},`,
+          '',
+          `Nous accusons réception de votre versement de 400 € au titre du loyer de septembre 2026 pour le bien que vous occupez (${biens[2].nom}, ${immeubles[0].adresse}).`,
+          `Le montant total dû pour ce mois s'élevant à 790 € (loyer et charges compris), il subsiste un solde de 390 € restant à régulariser.`,
+          '',
+          `Nous vous remercions de bien vouloir procéder au paiement de ce solde dans les meilleurs délais. Si une difficulté passagère explique ce règlement partiel, n'hésitez pas à nous contacter afin d'envisager ensemble un arrangement de paiement.`,
+          '',
+          `Restant à votre disposition,`,
+          '',
+          `Cordialement,`,
+          `La gérance`,
+        ].join('\n'),
+        date: '2026-09-05',
+        sens: 'envoye',
+      },
+      {
+        id: makeId(),
+        locataireId: locataires[3].id,
+        destinataire: 'locataire',
+        canal: 'courrier',
+        sujet: 'Rappel de paiement — Loyer de septembre 2026 impayé',
+        contenu: [
+          `${immeubles[0].nom}`,
+          `${immeubles[0].adresse}, ${immeubles[0].codePostal} ${immeubles[0].ville}`,
+          '',
+          `Charleroi, le 5 septembre 2026`,
+          '',
+          `Objet : Rappel de paiement — ${biens[3].nom}`,
+          '',
+          `Monsieur ${locataires[3].nom},`,
+          '',
+          `Sauf erreur ou omission de notre part, nous n'avons à ce jour reçu aucun paiement au titre du loyer de septembre 2026 pour le bien que vous occupez (${biens[3].nom}, ${immeubles[0].adresse}), d'un montant de 845 € (loyer et charges compris).`,
+          '',
+          `Cette situation faisant suite à des retards déjà constatés sur les mois précédents, nous vous demandons de bien vouloir régulariser ce montant dans les meilleurs délais.`,
+          `À défaut de règlement ou de prise de contact de votre part sous 8 jours, nous nous verrons contraints d'engager les démarches de recouvrement prévues par le contrat de bail.`,
+          '',
+          `Nous restons naturellement disponibles pour évoquer toute difficulté que vous rencontreriez et convenir, le cas échéant, d'un plan de paiement.`,
+          '',
+          `Cordialement,`,
+          `La gérance`,
+        ].join('\n'),
+        date: '2026-09-05',
         sens: 'envoye',
       },
     ],
