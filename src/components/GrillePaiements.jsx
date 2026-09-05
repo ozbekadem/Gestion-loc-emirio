@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, Button, Modal, Field, Input, Select } from './ui.jsx'
-import { formatMontant, MOIS_FR, STATUTS_PAIEMENT, statutPaiementInfo } from '../lib/utils.js'
+import { formatMontant, formatDate, MOIS_FR, STATUTS_PAIEMENT, statutPaiementInfo } from '../lib/utils.js'
 
 const MOIS_ABREGES = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
+const TRIMESTRES = ['1er trimestre', '2e trimestre', '3e trimestre', '4e trimestre']
 
 function anneesDisponibles(baux, paiements) {
   const annees = new Set([new Date().getFullYear()])
@@ -103,6 +104,14 @@ export default function GrillePaiements() {
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
+                <th className="sticky left-0 z-10 bg-white"></th>
+                {TRIMESTRES.map((t) => (
+                  <th key={t} colSpan={3} className="border-b border-slate-100 pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    {t}
+                  </th>
+                ))}
+              </tr>
+              <tr>
                 <th className="sticky left-0 z-10 bg-white pb-2 pr-4 text-left text-slate-500">Locataire</th>
                 {MOIS_ABREGES.map((m) => (
                   <th key={m} className="px-1 pb-2 text-center text-xs font-medium text-slate-500">{m}</th>
@@ -128,7 +137,7 @@ export default function GrillePaiements() {
                       <td key={i} className="px-1 py-1 text-center">
                         <button
                           onClick={() => ouvrirCellule(ligne, i)}
-                          title={`${info.label}${p ? ' — ' + formatMontant(p.montantPaye) : ''}`}
+                          title={`${info.label}${p?.montantPaye ? ' — ' + formatMontant(p.montantPaye) : ''}${p?.datePaiement ? ' — payé le ' + formatDate(p.datePaiement) : ''}`}
                           className={`h-9 w-full min-w-[3rem] rounded-md text-xs font-medium transition ${info.cellClass}`}
                         >
                           {p?.statut === 'paye' || p?.statut === 'partiel' ? formatMontant(p.montantPaye).replace(' €', '') : info.label[0]}

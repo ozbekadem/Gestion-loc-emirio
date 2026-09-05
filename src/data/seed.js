@@ -92,6 +92,9 @@ export function seedData() {
 
       const bailId = makeId()
       const loyerInitial = loyerBase - 30
+      // Dossiers administratifs volontairement incomplets pour les locataires à surveiller,
+      // afin que la page Tâches ait des cas concrets à afficher par défaut.
+      const dossierIncomplet = LOCATAIRES_EN_RETARD.has(locIndex) || LOCATAIRES_PARTIEL.has(locIndex) || estNouveau
       baux.push({
         id: bailId,
         locataireId,
@@ -108,6 +111,12 @@ export function seedData() {
         indiceInitial: 118 + (locIndex % 5),
         indiceActuel: 128.9,
         dateIndexation: `2026-${String((locIndex % 9) + 1).padStart(2, '0')}-01`,
+        fraisGestion: 50,
+        dateEntretienChaudiere: dossierIncomplet ? '' : '2026-03-15',
+        dateAttestationAssurance: dossierIncomplet ? '' : '2026-02-10',
+        dateVisiteAnnuelle: dossierIncomplet ? '' : '2026-04-05',
+        dateOres: dossierIncomplet ? '' : '2026-01-20',
+        dateSwde: dossierIncomplet ? '' : '2026-01-20',
       })
 
       if (!estNouveau) {
@@ -180,7 +189,7 @@ export function seedData() {
         cout: 850,
         date: '2026-08-20',
         categorie: 'Plomberie',
-        urgence: 'normale',
+        urgence: 'urgente',
       },
     ],
     prestataires: [

@@ -3,6 +3,9 @@ import { useStore } from '../lib/store.jsx'
 import { useNavigate } from '../lib/nav.jsx'
 import { Card, PageHeader, StatCard, Button, Badge, EmptyState } from '../components/ui.jsx'
 import { formatMontant, formatDate, moisCourant } from '../lib/utils.js'
+import { getTaches } from '../lib/taches.js'
+
+const URGENCE_TONE = { haute: 'red', moyenne: 'amber', basse: 'slate' }
 
 export default function Dashboard() {
   const { state } = useStore()
@@ -35,6 +38,9 @@ export default function Dashboard() {
     [baux],
   )
 
+  const taches = useMemo(() => getTaches(state), [state])
+  const tachesPrioritaires = taches.slice(0, 5)
+
   return (
     <div>
       <PageHeader
@@ -55,7 +61,29 @@ export default function Dashboard() {
         <StatCard label="Taux de recouvrement (mois)" value={`${kpis.tauxRecouvrement}%`} tone={kpis.tauxRecouvrement >= 90 ? 'green' : 'amber'} />
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <Card className="mt-8">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-900">Tâches prioritaires</h2>
+          <Button variant="ghost" onClick={() => goto('taches')}>Voir tout ({taches.length})</Button>
+        </div>
+        {tachesPrioritaires.length === 0 ? (
+          <EmptyState title="Tous les dossiers sont à jour" subtitle="Aucune tâche en attente pour le moment." />
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {tachesPrioritaires.map((t) => (
+              <div key={t.id} className="flex items-center justify-between gap-3 py-2.5">
+                <div>
+                  <p className="text-sm font-medium text-slate-800">{t.titre}</p>
+                  <p className="text-xs text-slate-500">{t.detail}{t.lieu ? ` — ${t.lieu}` : ''}</p>
+                </div>
+                <Badge tone={URGENCE_TONE[t.urgence]}>{t.urgence === 'haute' ? 'Urgent' : t.urgence === 'moyenne' ? 'À traiter' : 'Plus tard'}</Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <h2 className="mb-4 text-base font-semibold text-slate-900">Échéances de bail à venir</h2>
           {prochainesEcheances.length === 0 ? (

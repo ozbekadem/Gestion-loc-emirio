@@ -23,7 +23,16 @@ function labelFrequence(v) {
 const emptyBail = {
   locataireId: '', bienId: '', dateDebut: '', dateFin: '', loyer: '', charges: '', depotGarantie: '', statut: 'actif',
   frequence: 'mensuel', loyerInitial: '', indiceInitial: '', indiceActuel: '', dateIndexation: '',
+  fraisGestion: '', dateEntretienChaudiere: '', dateAttestationAssurance: '', dateVisiteAnnuelle: '', dateOres: '', dateSwde: '',
 }
+
+const CHECKLIST_ADMIN = [
+  { key: 'dateEntretienChaudiere', label: 'Entretien chaudière' },
+  { key: 'dateAttestationAssurance', label: 'Attestation assurance' },
+  { key: 'dateVisiteAnnuelle', label: 'Visite annuelle' },
+  { key: 'dateOres', label: 'ORES (élec. & gaz)' },
+  { key: 'dateSwde', label: 'SWDE (eau)' },
+]
 
 function loyerIndexe(values) {
   const initial = Number(values.loyerInitial)
@@ -64,6 +73,7 @@ export default function Baux() {
       loyerInitial: values.loyerInitial === '' ? Number(values.loyer) || 0 : Number(values.loyerInitial),
       indiceInitial: values.indiceInitial === '' ? '' : Number(values.indiceInitial),
       indiceActuel: values.indiceActuel === '' ? '' : Number(values.indiceActuel),
+      fraisGestion: Number(values.fraisGestion) || 0,
     }
     if (mode === 'create') baux.add(payload)
     else baux.update(id, payload)
@@ -244,6 +254,41 @@ export default function Baux() {
                   </Button>
                 </div>
               )}
+            </div>
+
+            <div className="rounded-lg border border-slate-200 p-3">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-700">Suivi administratif du dossier</p>
+                <Field label="">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500">Frais de gestion (€/mois)</span>
+                    <Input
+                      type="number" min="0" className="w-24"
+                      value={modal.values.fraisGestion}
+                      onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, fraisGestion: e.target.value } }))}
+                    />
+                  </div>
+                </Field>
+              </div>
+              <div className="space-y-3">
+                {CHECKLIST_ADMIN.map((item) => (
+                  <div key={item.key} className="flex items-center gap-3">
+                    <span className="w-44 shrink-0 text-sm text-slate-600">{item.label}</span>
+                    <Input
+                      type="date"
+                      value={modal.values[item.key]}
+                      onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, [item.key]: e.target.value } }))}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setModal((m) => ({ ...m, values: { ...m.values, [item.key]: new Date().toISOString().slice(0, 10) } }))}
+                    >
+                      Fait aujourd'hui
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           </form>
         )}

@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, Button, Badge, Modal, Field, Input, Select, Textarea, EmptyState } from '../components/ui.jsx'
 import { formatDate, formatMontant, labelMois, statutPaiementInfo } from '../lib/utils.js'
+import { itemsAdminBail } from '../lib/taches.js'
 
 const STATUTS_LOCATAIRE = {
   excellent_payeur: { label: 'Excellent payeur', tone: 'green' },
@@ -42,7 +43,7 @@ function toneEtat(etat) {
 }
 
 export default function DossierLocataire({ locataireId, onBack }) {
-  const { state, locataires, documents, etatsDesLieux, messages } = useStore()
+  const { state, locataires, documents, etatsDesLieux, messages, baux } = useStore()
   const fileInput = useRef(null)
   const [typeUpload, setTypeUpload] = useState('carte_identite')
   const [modalEdl, setModalEdl] = useState(null)
@@ -117,6 +118,13 @@ export default function DossierLocataire({ locataireId, onBack }) {
     if (confirm("Supprimer cet état des lieux ?")) etatsDesLieux.remove(edl.id)
   }
 
+  function marquerFaitAujourdhui(cle) {
+    if (!bail) return
+    baux.update(bail.id, { [cle]: new Date().toISOString().slice(0, 10) })
+  }
+
+  const itemsAdmin = bail ? itemsAdminBail(bail) : []
+
   return (
     <div>
       <button onClick={onBack} className="mb-4 text-sm font-medium text-slate-500 hover:text-slate-800">
@@ -176,6 +184,29 @@ export default function DossierLocataire({ locataireId, onBack }) {
           )}
         </Card>
       </div>
+
+      {bail && (
+        <Card className="mt-6">
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">Suivi administratif du dossier</h2>
+          <div className="divide-y divide-slate-100">
+            {itemsAdmin.map((item) => (
+              <div key={item.key} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${item.ok ? 'bg-emerald-500' : 'bg-red-500'}`} aria-hidden />
+                  <span className="text-sm text-slate-700">{item.label}</span>
+                  <span className="text-xs text-slate-400">
+                    {item.valeur ? `Dernière fois : ${formatDate(item.valeur)}` : 'Jamais renseigné'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {item.ok ? <Badge tone="green">À jour</Badge> : <Badge tone="red">À faire</Badge>}
+                  <Button variant="ghost" onClick={() => marquerFaitAujourdhui(item.key)}>Marquer fait</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card className="mt-6">
         <div className="mb-3 flex items-center justify-between">
