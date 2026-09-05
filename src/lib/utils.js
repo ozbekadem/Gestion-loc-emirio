@@ -35,3 +35,22 @@ export const STATUTS_PAIEMENT = [
 export function statutPaiementInfo(value) {
   return STATUTS_PAIEMENT.find((s) => s.value === value) || STATUTS_PAIEMENT[3]
 }
+
+// Reversement au propriétaire = ce qu'on lui doit une fois le loyer encaissé,
+// après déduction des frais de gestion de l'agence.
+export function montantAReverser(paiement) {
+  const percu = Number(paiement?.montantPaye) || 0
+  const frais = Number(paiement?.fraisGestion) || 0
+  return Math.max(0, percu - frais)
+}
+
+export function statutReversement(paiement) {
+  const recu = paiement?.statut === 'paye' || paiement?.statut === 'partiel'
+  if (!recu) return null
+  return paiement.dateReversement ? 'reverse' : 'a_reverser'
+}
+
+export const STATUTS_REVERSEMENT = {
+  a_reverser: { label: 'À reverser', tone: 'amber' },
+  reverse: { label: 'Reversé', tone: 'green' },
+}

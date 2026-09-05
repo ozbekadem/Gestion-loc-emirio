@@ -7,6 +7,7 @@ const CANAUX = [
   { value: 'email', label: 'E-mail' },
   { value: 'sms', label: 'SMS' },
   { value: 'courrier', label: 'Courrier' },
+  { value: 'virement', label: 'Virement' },
   { value: 'autre', label: 'Autre' },
 ]
 

@@ -1,3 +1,5 @@
+import { labelMois } from './utils.js'
+
 const JOUR_MS = 24 * 60 * 60 * 1000
 
 function joursDepuis(dateStr) {
@@ -35,6 +37,28 @@ export function getTaches(state) {
   const taches = []
 
   const bauxActifs = state.baux.filter((b) => b.statut === 'actif')
+
+  state.paiements.forEach((p) => {
+    const recu = p.statut === 'paye' || p.statut === 'partiel'
+    if (!recu || p.dateReversement) return
+    const jours = joursDepuis(p.datePaiement)
+    if (jours < 7) return
+    const bail = state.baux.find((b) => b.id === p.bailId)
+    const loc = bail ? state.locataires.find((l) => l.id === bail.locataireId) : null
+    const bien = bail ? state.biens.find((x) => x.id === bail.bienId) : null
+    const immeuble = bien ? state.immeubles.find((i) => i.id === bien.immeubleId) : null
+    const nomLoc = loc ? `${loc.prenom} ${loc.nom}` : 'Locataire inconnu'
+    taches.push({
+      id: `reversement-${p.id}`,
+      type: 'reversement_en_attente',
+      urgence: jours > 15 ? 'haute' : 'moyenne',
+      titre: `Reverser le loyer de ${nomLoc} au propriétaire`,
+      detail: `${labelMois(p.mois)} — encaissé depuis ${jours} jours${immeuble?.proprietaireNom ? `, à envoyer à ${immeuble.proprietaireNom}` : ''}`,
+      lieu: immeuble?.nom,
+      immeubleId: immeuble?.id,
+      page: 'reversements',
+    })
+  })
 
   bauxActifs.forEach((b) => {
     const loc = state.locataires.find((l) => l.id === b.locataireId)

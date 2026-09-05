@@ -64,6 +64,7 @@ export default function GrillePaiements() {
       setCellule(null)
       return
     }
+    const bail = state.baux.find((b) => b.id === bailId)
     const payload = {
       bailId,
       mois,
@@ -71,6 +72,7 @@ export default function GrillePaiements() {
       montantPaye: statut === 'retard' ? 0 : Number(cellule.montantPaye) || 0,
       datePaiement: statut === 'retard' ? '' : cellule.datePaiement,
       statut,
+      fraisGestion: Number(bail?.fraisGestion) || 0,
     }
     if (paiementId) paiements.update(paiementId, payload)
     else paiements.add(payload)

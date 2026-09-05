@@ -119,6 +119,8 @@ export function seedData() {
         dateSwde: dossierIncomplet ? '' : '2026-01-20',
       })
 
+      const fraisGestion = 50
+
       if (!estNouveau) {
         for (let mois = 1; mois <= 8; mois += 1) {
           const cle = moisKey(2026, mois)
@@ -126,6 +128,7 @@ export function seedData() {
           if (LOCATAIRES_EN_RETARD.has(locIndex) && mois >= 7) statut = 'retard'
           else if (LOCATAIRES_PARTIEL.has(locIndex) && mois === 6) statut = 'partiel'
           const montantAttendu = loyerBase + charges
+          const recu = statut === 'paye' || statut === 'partiel'
           paiements.push({
             id: makeId(),
             bailId,
@@ -134,6 +137,10 @@ export function seedData() {
             montantPaye: statut === 'paye' ? montantAttendu : statut === 'partiel' ? Math.round(montantAttendu * 0.5) : 0,
             datePaiement: statut === 'retard' ? '' : `${cle}-05`,
             statut,
+            fraisGestion,
+            // Les loyers déjà encaissés les mois précédents ont normalement déjà
+            // été reversés au propriétaire, sauf les tout derniers.
+            dateReversement: recu && mois <= 7 ? `${cle}-10` : '',
           })
         }
       }
@@ -156,6 +163,9 @@ export function seedData() {
           montantPaye: scenarioSeptembre.montantPaye,
           datePaiement: scenarioSeptembre.datePaiement,
           statut: scenarioSeptembre.statut,
+          fraisGestion,
+          // Reversement pas encore effectué : c'est le mois en cours.
+          dateReversement: '',
         })
       }
 

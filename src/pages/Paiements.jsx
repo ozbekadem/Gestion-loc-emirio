@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Badge, EmptyState } from '../components/ui.jsx'
 import GrillePaiements from '../components/GrillePaiements.jsx'
-import { formatMontant, labelMois, statutPaiementInfo } from '../lib/utils.js'
+import { formatMontant, formatDate, labelMois, statutPaiementInfo, montantAReverser, statutReversement, STATUTS_REVERSEMENT } from '../lib/utils.js'
 
 function shiftMois(moisKey, delta) {
   const [annee, mois] = moisKey.split('-').map(Number)
@@ -75,6 +75,7 @@ export default function Paiements() {
     e.preventDefault()
     const montantPaye = Number(modal.montantPaye) || 0
     const statut = montantPaye <= 0 ? 'retard' : montantPaye < modal.montantAttendu ? 'partiel' : 'paye'
+    const bail = state.baux.find((b) => b.id === modal.bailId)
     const payload = {
       bailId: modal.bailId,
       mois,
@@ -82,6 +83,7 @@ export default function Paiements() {
       montantPaye,
       datePaiement: statut === 'retard' ? '' : modal.datePaiement,
       statut,
+      fraisGestion: Number(bail?.fraisGestion) || 0,
     }
     if (modal.paiementId) paiements.update(modal.paiementId, payload)
     else paiements.add(payload)
@@ -90,6 +92,23 @@ export default function Paiements() {
 
   function annulerPaiement(ligne) {
     if (ligne.paiement && confirm('Annuler ce paiement ?')) paiements.remove(ligne.paiement.id)
+  }
+
+  function marquerReverse(ligne) {
+    if (!ligne.paiement) return
+    const dateReversement = new Date().toISOString().slice(0, 10)
+    paiements.update(ligne.paiement.id, { dateReversement })
+    if (ligne.immeuble?.proprietaireNom) {
+      messages.add({
+        immeubleId: ligne.immeuble.id,
+        destinataire: 'proprietaire',
+        canal: 'virement',
+        sujet: `Reversement — ${labelMois(mois)}`,
+        contenu: `Virement envoyé le ${formatDate(dateReversement)} pour le loyer de ${ligne.loc ? `${ligne.loc.prenom} ${ligne.loc.nom}` : 'locataire'} (${labelMois(mois)}) : ${formatMontant(montantAReverser(ligne.paiement))} net des frais de gestion.`,
+        date: dateReversement,
+        sens: 'envoye',
+      })
+    }
   }
 
   function relancer(ligne, soldeRestant) {
@@ -182,6 +201,7 @@ export default function Paiements() {
                       <th className="pb-2 pr-4">Bien</th>
                       <th className="pb-2 pr-4">Montant attendu</th>
                       <th className="pb-2 pr-4">Statut</th>
+                      <th className="pb-2 pr-4">Reversement propriétaire</th>
                       <th className="pb-2"></th>
                     </tr>
                   </thead>
@@ -193,6 +213,8 @@ export default function Paiements() {
                         l.paiement?.statut === 'retard' ||
                         l.paiement?.statut === 'partiel' ||
                         (!l.paiement && mois < moisCourantKey())
+                      const statutRev = l.paiement ? statutReversement(l.paiement) : null
+                      const revInfo = statutRev ? STATUTS_REVERSEMENT[statutRev] : null
                       return (
                         <tr key={l.bail.id} className="border-t border-slate-100">
                           <td className="py-2 pr-4 font-medium text-slate-800">{l.loc ? `${l.loc.prenom} ${l.loc.nom}` : '—'}</td>
@@ -207,6 +229,18 @@ export default function Paiements() {
                             </Badge>
                             {l.paiement?.statut === 'partiel' && (
                               <p className="mt-0.5 text-xs text-danger-600">Solde dû : {formatMontant(soldeRestant)}</p>
+                            )}
+                          </td>
+                          <td className="py-2 pr-4">
+                            {!revInfo ? (
+                              <span className="text-slate-300">—</span>
+                            ) : statutRev === 'reverse' ? (
+                              <Badge tone={revInfo.tone}>Reversé le {formatDate(l.paiement.dateReversement)}</Badge>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <Badge tone={revInfo.tone}>{formatMontant(montantAReverser(l.paiement))} à reverser</Badge>
+                                <Button variant="ghost" onClick={() => marquerReverse(l)}>Marquer reversé</Button>
+                              </div>
                             )}
                           </td>
                           <td className="py-2 text-right">
@@ -261,11 +295,27 @@ export default function Paiements() {
               const montantPaye = Number(modal.montantPaye) || 0
               const statutPrevu = montantPaye <= 0 ? 'retard' : montantPaye < modal.montantAttendu ? 'partiel' : 'paye'
               const info = statutPaiementInfo(statutPrevu)
+              const bail = state.baux.find((b) => b.id === modal.bailId)
+              const fraisGestion = Number(bail?.fraisGestion) || 0
               return (
-                <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-sm">
-                  <span className="text-slate-600">Statut enregistré :</span>
-                  <Badge tone={info.tone}>{info.label}</Badge>
-                </div>
+                <>
+                  <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-sm">
+                    <span className="text-slate-600">Statut enregistré :</span>
+                    <Badge tone={info.tone}>{info.label}</Badge>
+                  </div>
+                  {montantPaye > 0 && fraisGestion > 0 && (
+                    <div className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                      <div className="flex items-center justify-between">
+                        <span>Frais de gestion</span>
+                        <span>− {formatMontant(fraisGestion)}</span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between font-medium text-slate-800">
+                        <span>Net à reverser au propriétaire</span>
+                        <span>{formatMontant(Math.max(0, montantPaye - fraisGestion))}</span>
+                      </div>
+                    </div>
+                  )}
+                </>
               )
             })()}
           </form>

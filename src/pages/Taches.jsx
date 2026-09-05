@@ -18,6 +18,7 @@ const TYPE_ICONE = {
   proprietaire_manquant: '🏠',
   sinistre_suivi: '🛡️',
   travaux_urgent: '🛠️',
+  reversement_en_attente: '💸',
 }
 
 export default function Taches() {

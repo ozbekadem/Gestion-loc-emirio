@@ -2,12 +2,14 @@ import React, { useMemo, useState } from 'react'
 import { NavProvider } from './lib/nav.jsx'
 import { useStore } from './lib/store.jsx'
 import { getTaches } from './lib/taches.js'
+import { statutReversement } from './lib/utils.js'
 import Dashboard from './pages/Dashboard.jsx'
 import Taches from './pages/Taches.jsx'
 import Immeubles from './pages/Immeubles.jsx'
 import Locataires from './pages/Locataires.jsx'
 import Baux from './pages/Baux.jsx'
 import Paiements from './pages/Paiements.jsx'
+import Reversements from './pages/Reversements.jsx'
 import Travaux from './pages/Travaux.jsx'
 import Prestataires from './pages/Prestataires.jsx'
 import Candidatures from './pages/Candidatures.jsx'
@@ -33,6 +35,7 @@ const NAV_SECTIONS = [
       { id: 'locataires', label: 'Locataires', icon: '👤', Component: Locataires },
       { id: 'baux', label: 'Baux', icon: '📄', Component: Baux },
       { id: 'paiements', label: 'Paiements', icon: '💶', Component: Paiements },
+      { id: 'reversements', label: 'Reversements', icon: '💸', Component: Reversements },
     ],
   },
   {
@@ -70,6 +73,7 @@ export default function App() {
   const current = NAV.find((n) => n.id === active) ?? NAV[0]
   const Page = current.Component
   const nbTachesUrgentes = useMemo(() => getTaches(state).filter((t) => t.urgence === 'haute').length, [state])
+  const nbReversementsEnAttente = useMemo(() => state.paiements.filter((p) => statutReversement(p) === 'a_reverser').length, [state.paiements])
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -107,6 +111,9 @@ export default function App() {
                     <span className="flex-1 text-left">{item.label}</span>
                     {item.id === 'taches' && nbTachesUrgentes > 0 && (
                       <span className="rounded-full bg-danger-600 px-1.5 py-0.5 text-xs font-semibold text-white">{nbTachesUrgentes}</span>
+                    )}
+                    {item.id === 'reversements' && nbReversementsEnAttente > 0 && (
+                      <span className="rounded-full bg-warning-500 px-1.5 py-0.5 text-xs font-semibold text-white">{nbReversementsEnAttente}</span>
                     )}
                   </button>
                 ))}
