@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, EmptyState, Badge } from '../components/ui.jsx'
 import { formatDate } from '../lib/utils.js'
+import DossierLocataire from './DossierLocataire.jsx'
 
 const STATUTS = [
   { value: 'excellent_payeur', label: 'Excellent payeur', tone: 'green' },
@@ -16,10 +17,19 @@ export default function Locataires() {
   const { state, locataires } = useStore()
   const [modal, setModal] = useState(null)
   const [search, setSearch] = useState('')
+  const [filtreImmeuble, setFiltreImmeuble] = useState('')
+  const [dossierId, setDossierId] = useState(null)
 
-  const list = state.locataires.filter((l) =>
-    `${l.prenom} ${l.nom} ${l.email}`.toLowerCase().includes(search.toLowerCase()),
-  )
+  const list = state.locataires.filter((l) => {
+    const bien = state.biens.find((b) => b.id === l.bienId)
+    const matchImmeuble = !filtreImmeuble || bien?.immeubleId === filtreImmeuble
+    const matchSearch = `${l.prenom} ${l.nom} ${l.email}`.toLowerCase().includes(search.toLowerCase())
+    return matchImmeuble && matchSearch
+  })
+
+  if (dossierId) {
+    return <DossierLocataire locataireId={dossierId} onBack={() => setDossierId(null)} />
+  }
 
   function openNew() {
     setModal({ mode: 'create', values: emptyLocataire })
@@ -54,12 +64,20 @@ export default function Locataires() {
       />
 
       {state.locataires.length > 0 && (
-        <Input
-          placeholder="Rechercher un locataire..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="mb-4 max-w-sm"
-        />
+        <div className="mb-4 flex flex-wrap gap-3">
+          <Input
+            placeholder="Rechercher un locataire..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-sm"
+          />
+          {state.immeubles.length > 0 && (
+            <Select value={filtreImmeuble} onChange={(e) => setFiltreImmeuble(e.target.value)} className="max-w-xs">
+              <option value="">Tous les immeubles</option>
+              {state.immeubles.map((im) => <option key={im.id} value={im.id}>{im.nom}</option>)}
+            </Select>
+          )}
+        </div>
       )}
 
       {state.locataires.length === 0 ? (
@@ -89,7 +107,8 @@ export default function Locataires() {
                   {immeuble && <p className="text-slate-400">{immeuble.nom}</p>}
                   <p className="mt-1 text-slate-400">Entrée : {formatDate(l.dateEntree)}</p>
                 </div>
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button variant="secondary" onClick={() => setDossierId(l.id)}>Voir le dossier</Button>
                   <Button variant="ghost" onClick={() => openEdit(l)}>Modifier</Button>
                   <Button variant="danger" onClick={() => remove(l)}>Supprimer</Button>
                 </div>

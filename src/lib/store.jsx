@@ -16,6 +16,8 @@ export const COLLECTIONS = [
   'agenda',
   'sinistres',
   'messages',
+  'documents',
+  'etatsDesLieux',
 ]
 
 function loadInitialState() {
