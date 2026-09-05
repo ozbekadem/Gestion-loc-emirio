@@ -122,7 +122,7 @@ export default function Messagerie() {
                   >
                     <span>
                       {im.nom}
-                      {!im.proprietaireNom && <span className="ml-1 text-xs text-amber-500">(sans contact)</span>}
+                      {!im.proprietaireNom && <span className="ml-1 text-xs text-warning-600">(sans contact)</span>}
                     </span>
                     {nb > 0 && <span className="text-xs text-slate-400">{nb}</span>}
                   </button>
@@ -134,8 +134,8 @@ export default function Messagerie() {
 
         <div className="space-y-6 lg:col-span-2">
           {mode === 'proprietaires' && immeubleSelectionne && !immeubleSelectionne.proprietaireNom && (
-            <Card className="border-amber-200 bg-amber-50">
-              <p className="text-sm text-amber-700">
+            <Card className="border-warning-200 bg-warning-50">
+              <p className="text-sm text-warning-700">
                 Aucun contact propriétaire renseigné pour "{immeubleSelectionne.nom}". Ajoutez-le depuis la page Immeubles pour garder une trace de qui vous contactez.
               </p>
             </Card>

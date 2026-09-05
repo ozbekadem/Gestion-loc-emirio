@@ -79,7 +79,7 @@ export default function App() {
         }`}
       >
         <div className="flex h-16 items-center gap-2 border-b border-slate-200 px-5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-extrabold text-white">E</span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent-500 to-accent-600 text-sm font-extrabold text-white shadow-sm">E</span>
           <div className="leading-tight">
             <p className="text-base font-extrabold tracking-tight text-slate-900">Emirio</p>
             <p className="text-[11px] text-slate-400">Gestion locative</p>
@@ -106,7 +106,7 @@ export default function App() {
                     <span aria-hidden>{item.icon}</span>
                     <span className="flex-1 text-left">{item.label}</span>
                     {item.id === 'taches' && nbTachesUrgentes > 0 && (
-                      <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-semibold text-white">{nbTachesUrgentes}</span>
+                      <span className="rounded-full bg-danger-600 px-1.5 py-0.5 text-xs font-semibold text-white">{nbTachesUrgentes}</span>
                     )}
                   </button>
                 ))}

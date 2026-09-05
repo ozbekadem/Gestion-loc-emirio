@@ -251,7 +251,7 @@ export default function DossierLocataire({ locataireId, onBack }) {
             {itemsAdmin.map((item) => (
               <div key={item.key} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${item.ok ? 'bg-emerald-500' : 'bg-red-500'}`} aria-hidden />
+                  <span className={`h-2 w-2 rounded-full ${item.ok ? 'bg-success-500' : 'bg-danger-500'}`} aria-hidden />
                   <span className="text-sm text-slate-700">{item.label}</span>
                   <span className="text-xs text-slate-400">
                     {item.valeur ? `Dernière fois : ${formatDate(item.valeur)}` : 'Jamais renseigné'}

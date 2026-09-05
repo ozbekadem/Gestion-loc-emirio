@@ -26,9 +26,9 @@ export function labelMois(moisKey) {
 }
 
 export const STATUTS_PAIEMENT = [
-  { value: 'paye', label: 'Payé', tone: 'green', cellClass: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' },
-  { value: 'partiel', label: 'Partiel', tone: 'amber', cellClass: 'bg-amber-100 text-amber-800 hover:bg-amber-200' },
-  { value: 'retard', label: 'Retard', tone: 'red', cellClass: 'bg-red-100 text-red-800 hover:bg-red-200' },
+  { value: 'paye', label: 'Payé', tone: 'green', cellClass: 'bg-success-100 text-success-700 hover:bg-success-200' },
+  { value: 'partiel', label: 'Partiel', tone: 'amber', cellClass: 'bg-warning-100 text-warning-700 hover:bg-warning-200' },
+  { value: 'retard', label: 'Retard', tone: 'red', cellClass: 'bg-danger-100 text-danger-700 hover:bg-danger-200' },
   { value: 'attendu', label: 'Attendu', tone: 'slate', cellClass: 'bg-slate-50 text-slate-400 hover:bg-slate-100' },
 ]
 

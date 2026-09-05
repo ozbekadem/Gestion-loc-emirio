@@ -41,11 +41,11 @@ export default function Taches() {
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
           <p className="text-sm text-slate-500">Urgent</p>
-          <p className="mt-1 text-2xl font-bold text-red-600">{parUrgence.haute.length}</p>
+          <p className="mt-1 text-2xl font-bold text-danger-600">{parUrgence.haute.length}</p>
         </Card>
         <Card>
           <p className="text-sm text-slate-500">À traiter</p>
-          <p className="mt-1 text-2xl font-bold text-amber-600">{parUrgence.moyenne.length}</p>
+          <p className="mt-1 text-2xl font-bold text-warning-600">{parUrgence.moyenne.length}</p>
         </Card>
         <Card>
           <p className="text-sm text-slate-500">Quand possible</p>

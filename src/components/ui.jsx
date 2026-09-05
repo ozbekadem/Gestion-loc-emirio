@@ -1,18 +1,18 @@
 import React from 'react'
 
 export function Button({ variant = 'primary', className = '', ...props }) {
-  const base = 'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed'
+  const base = 'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed'
   const variants = {
-    primary: 'bg-brand-600 text-white hover:bg-brand-700',
+    primary: 'bg-brand-600 text-white shadow-sm hover:bg-brand-700',
     secondary: 'bg-slate-100 text-slate-700 hover:bg-slate-200',
-    danger: 'bg-red-50 text-red-600 hover:bg-red-100',
+    danger: 'bg-danger-50 text-danger-600 hover:bg-danger-100',
     ghost: 'text-slate-500 hover:bg-slate-100',
   }
   return <button className={`${base} ${variants[variant] || variants.primary} ${className}`} {...props} />
 }
 
 export function Card({ className = '', children }) {
-  return <div className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>{children}</div>
+  return <div className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow duration-150 ${className}`}>{children}</div>
 }
 
 export function PageHeader({ title, subtitle, action }) {
@@ -30,10 +30,10 @@ export function PageHeader({ title, subtitle, action }) {
 export function Badge({ tone = 'slate', children }) {
   const tones = {
     slate: 'bg-slate-100 text-slate-600',
-    green: 'bg-emerald-100 text-emerald-700',
-    red: 'bg-red-100 text-red-700',
-    amber: 'bg-amber-100 text-amber-700',
-    blue: 'bg-blue-100 text-blue-700',
+    green: 'bg-success-100 text-success-700',
+    red: 'bg-danger-100 text-danger-700',
+    amber: 'bg-warning-100 text-warning-700',
+    blue: 'bg-brand-100 text-brand-700',
   }
   return <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${tones[tone] || tones.slate}`}>{children}</span>
 }
@@ -92,10 +92,10 @@ export function Modal({ open, title, onClose, children, footer }) {
 export function StatCard({ label, value, tone = 'slate', hint }) {
   const tones = {
     slate: 'text-slate-900',
-    green: 'text-emerald-600',
-    red: 'text-red-600',
-    amber: 'text-amber-600',
-    blue: 'text-blue-600',
+    green: 'text-success-600',
+    red: 'text-danger-600',
+    amber: 'text-warning-600',
+    blue: 'text-brand-600',
   }
   return (
     <Card>

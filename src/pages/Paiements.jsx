@@ -145,8 +145,8 @@ export default function Paiements() {
         <>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Card><p className="text-sm text-slate-500">Attendu ce mois</p><p className="mt-1 text-xl font-bold text-slate-900">{formatMontant(totalAttendu)}</p></Card>
-            <Card><p className="text-sm text-slate-500">Encaissé ce mois</p><p className="mt-1 text-xl font-bold text-emerald-600">{formatMontant(totalPaye)}</p></Card>
-            <Card><p className="text-sm text-slate-500">Restant dû</p><p className="mt-1 text-xl font-bold text-red-600">{formatMontant(totalAttendu - totalPaye)}</p></Card>
+            <Card><p className="text-sm text-slate-500">Encaissé ce mois</p><p className="mt-1 text-xl font-bold text-success-600">{formatMontant(totalPaye)}</p></Card>
+            <Card><p className="text-sm text-slate-500">Restant dû</p><p className="mt-1 text-xl font-bold text-danger-600">{formatMontant(totalAttendu - totalPaye)}</p></Card>
           </div>
 
           {toutesLesLignes.length > 0 && (
@@ -206,7 +206,7 @@ export default function Paiements() {
                               {info.label}{l.paiement?.montantPaye ? ` — ${formatMontant(l.paiement.montantPaye)}` : ''}
                             </Badge>
                             {l.paiement?.statut === 'partiel' && (
-                              <p className="mt-0.5 text-xs text-red-500">Solde dû : {formatMontant(soldeRestant)}</p>
+                              <p className="mt-0.5 text-xs text-danger-600">Solde dû : {formatMontant(soldeRestant)}</p>
                             )}
                           </td>
                           <td className="py-2 text-right">

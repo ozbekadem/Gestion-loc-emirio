@@ -48,7 +48,7 @@ export default function Parametres() {
       <PageHeader title="Paramètres" subtitle="Sauvegarde et données de l'application" />
 
       {message && (
-        <div className={`mb-4 rounded-lg px-4 py-2 text-sm ${message.tone === 'ok' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+        <div className={`mb-4 rounded-lg px-4 py-2 text-sm ${message.tone === 'ok' ? 'bg-success-50 text-success-700' : 'bg-danger-50 text-danger-700'}`}>
           {message.texte}
         </div>
       )}

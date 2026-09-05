@@ -110,8 +110,8 @@ export default function Comptabilite() {
               {parMois.map((r, i) => (
                 <tr key={i} className="border-t border-slate-100">
                   <td className="py-2 pr-4 text-slate-700">{MOIS_FR[i]}</td>
-                  <td className="py-2 pr-4 text-emerald-600">{formatMontant(r.revenus)}</td>
-                  <td className="py-2 pr-4 text-red-600">{formatMontant(r.depenses)}</td>
+                  <td className="py-2 pr-4 text-success-600">{formatMontant(r.revenus)}</td>
+                  <td className="py-2 pr-4 text-danger-600">{formatMontant(r.depenses)}</td>
                   <td className="py-2 pr-4 font-medium text-slate-800">{formatMontant(r.revenus - r.depenses)}</td>
                 </tr>
               ))}
@@ -137,8 +137,8 @@ export default function Comptabilite() {
                 {parImmeuble.map(({ immeuble, revenus, depenses }) => (
                   <tr key={immeuble.id} className="border-t border-slate-100">
                     <td className="py-2 pr-4 font-medium text-slate-800">{immeuble.nom}</td>
-                    <td className="py-2 pr-4 text-emerald-600">{formatMontant(revenus)}</td>
-                    <td className="py-2 pr-4 text-red-600">{formatMontant(depenses)}</td>
+                    <td className="py-2 pr-4 text-success-600">{formatMontant(revenus)}</td>
+                    <td className="py-2 pr-4 text-danger-600">{formatMontant(depenses)}</td>
                     <td className="py-2 pr-4 font-medium text-slate-800">{formatMontant(revenus - depenses)}</td>
                   </tr>
                 ))}

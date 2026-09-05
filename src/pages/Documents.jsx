@@ -112,7 +112,7 @@ export default function Documents() {
               {type === 'quittance' && locataire && (
                 <Field label="Mois payé">
                   {paiementsQuittables.length === 0 ? (
-                    <p className="text-xs text-amber-600">Aucun paiement encaissé pour ce locataire : impossible d'émettre une quittance.</p>
+                    <p className="text-xs text-warning-700">Aucun paiement encaissé pour ce locataire : impossible d'émettre une quittance.</p>
                   ) : (
                     <Select value={paiementSelectionne?.id || ''} onChange={(e) => setPaiementId(e.target.value)}>
                       {paiementsQuittables.map((p) => (
