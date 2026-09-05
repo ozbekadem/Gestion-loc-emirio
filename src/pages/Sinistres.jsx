@@ -16,9 +16,10 @@ const emptySinistre = {
 }
 
 export default function Sinistres() {
-  const { state, sinistres } = useStore()
+  const { state, sinistres, messages } = useStore()
   const [modal, setModal] = useState(null)
   const [filtreImmeuble, setFiltreImmeuble] = useState('')
+  const [notif, setNotif] = useState(null)
 
   function openNew() {
     setModal({ mode: 'create', values: emptySinistre })
@@ -36,6 +37,36 @@ export default function Sinistres() {
   }
   function remove(s) {
     if (confirm(`Supprimer le dossier de sinistre "${s.type}" ?`)) sinistres.remove(s.id)
+  }
+
+  function notifierProprietaire(s) {
+    const immeuble = state.immeubles.find((i) => i.id === s.immeubleId)
+    const bien = state.biens.find((b) => b.id === s.bienId)
+    if (!immeuble) return
+    const texte = [
+      `Objet : Sinistre — ${s.type} — ${immeuble.nom}`,
+      '',
+      `Bonjour${immeuble.proprietaireNom ? ` ${immeuble.proprietaireNom}` : ''},`,
+      '',
+      `Un sinistre "${s.type}" a été déclaré le ${formatDate(s.dateSinistre)} sur votre bien ${immeuble.nom}${bien ? ` (${bien.nom})` : ''}.`,
+      s.description ? `Détails : ${s.description}` : '',
+      s.numeroDossier ? `N° de dossier assurance : ${s.numeroDossier}` : '',
+      `Montant estimé des dégâts : ${formatMontant(s.montantEstime)}.`,
+      '',
+      'Nous revenons vers vous dès que le dossier assurance évolue.',
+      '',
+      'Cordialement,',
+    ].filter(Boolean).join('\n')
+    messages.add({
+      immeubleId: immeuble.id,
+      destinataire: 'proprietaire',
+      canal: 'email',
+      sujet: `Sinistre — ${s.type} — ${immeuble.nom}`,
+      contenu: texte,
+      date: new Date().toISOString().slice(0, 10),
+      sens: 'envoye',
+    })
+    setNotif({ immeuble, texte })
   }
 
   const biensDeImmeuble = state.biens.filter((b) => b.immeubleId === modal?.values.immeubleId)
@@ -93,6 +124,7 @@ export default function Sinistres() {
                       <td className="py-2 pr-4 text-slate-600">{formatMontant(s.montantEstime)}</td>
                       <td className="py-2 pr-4"><Badge tone={info.tone}>{info.label}</Badge></td>
                       <td className="py-2 text-right">
+                        <Button variant="secondary" onClick={() => notifierProprietaire(s)}>Notifier propriétaire</Button>
                         <Button variant="ghost" onClick={() => openEdit(s)}>Modifier</Button>
                         <Button variant="danger" onClick={() => remove(s)}>Suppr.</Button>
                       </td>
@@ -164,6 +196,24 @@ export default function Sinistres() {
               <Textarea value={modal.values.description} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, description: e.target.value } }))} />
             </Field>
           </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!notif}
+        onClose={() => setNotif(null)}
+        title={notif ? `Propriétaire notifié — ${notif.immeuble.nom}` : ''}
+        footer={<Button onClick={() => setNotif(null)}>Fermer</Button>}
+      >
+        {notif && (
+          <>
+            <pre className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{notif.texte}</pre>
+            <p className="mt-2 text-xs text-slate-400">
+              {notif.immeuble.proprietaireEmail
+                ? `Enregistré dans la messagerie propriétaire (${notif.immeuble.proprietaireEmail}).`
+                : "Enregistré dans la messagerie propriétaire. Pensez à renseigner l'e-mail du propriétaire depuis la page Immeubles."}
+            </p>
+          </>
         )}
       </Modal>
     </div>

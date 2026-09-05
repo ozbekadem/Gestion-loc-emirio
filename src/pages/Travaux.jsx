@@ -26,9 +26,10 @@ const emptyTravail = {
 }
 
 export default function Travaux() {
-  const { state, travaux } = useStore()
+  const { state, travaux, messages } = useStore()
   const [modal, setModal] = useState(null)
   const [filtreImmeuble, setFiltreImmeuble] = useState('')
+  const [notif, setNotif] = useState(null)
 
   function openNew() {
     setModal({ mode: 'create', values: emptyTravail })
@@ -49,10 +50,44 @@ export default function Travaux() {
   }
 
   const biensDeImmeuble = state.biens.filter((b) => b.immeubleId === modal?.values.immeubleId)
-  const liste = state.travaux.filter((t) => !filtreImmeuble || t.immeubleId === filtreImmeuble)
+  const liste = state.travaux
+    .filter((t) => !filtreImmeuble || t.immeubleId === filtreImmeuble)
+    .sort((a, b) => {
+      const poids = (t) => (t.statut !== 'termine' && t.urgence === 'urgente' ? 0 : t.statut !== 'termine' ? 1 : 2)
+      return poids(a) - poids(b)
+    })
 
   function statutInfo(v) {
     return STATUTS.find((s) => s.value === v) || STATUTS[0]
+  }
+
+  function notifierProprietaire(t) {
+    const immeuble = state.immeubles.find((i) => i.id === t.immeubleId)
+    const bien = state.biens.find((b) => b.id === t.bienId)
+    if (!immeuble) return
+    const texte = [
+      `Objet : Travaux — ${t.titre} — ${immeuble.nom}`,
+      '',
+      `Bonjour${immeuble.proprietaireNom ? ` ${immeuble.proprietaireNom}` : ''},`,
+      '',
+      `Une intervention "${t.titre}" (${t.categorie}) est ${t.statut === 'termine' ? 'terminée' : t.statut === 'en_cours' ? 'en cours' : 'à planifier'} sur votre bien ${immeuble.nom}${bien ? ` (${bien.nom})` : ''}${t.urgence === 'urgente' ? ', signalée comme urgente' : ''}.`,
+      t.description ? `Détails : ${t.description}` : '',
+      `Coût estimé : ${formatMontant(t.cout)}.`,
+      '',
+      'Nous restons à votre disposition pour toute question.',
+      '',
+      'Cordialement,',
+    ].filter(Boolean).join('\n')
+    messages.add({
+      immeubleId: immeuble.id,
+      destinataire: 'proprietaire',
+      canal: 'email',
+      sujet: `Travaux — ${t.titre} — ${immeuble.nom}`,
+      contenu: texte,
+      date: new Date().toISOString().slice(0, 10),
+      sens: 'envoye',
+    })
+    setNotif({ immeuble, texte })
   }
 
   return (
@@ -96,7 +131,8 @@ export default function Travaux() {
                   {t.date && <p>Date : {formatDate(t.date)}</p>}
                   <p className="font-medium text-slate-800">{formatMontant(t.cout)}</p>
                 </div>
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button variant="secondary" onClick={() => notifierProprietaire(t)}>Notifier propriétaire</Button>
                   <Button variant="ghost" onClick={() => openEdit(t)}>Modifier</Button>
                   <Button variant="danger" onClick={() => remove(t)}>Supprimer</Button>
                 </div>
@@ -171,6 +207,24 @@ export default function Travaux() {
               </Select>
             </Field>
           </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!notif}
+        onClose={() => setNotif(null)}
+        title={notif ? `Propriétaire notifié — ${notif.immeuble.nom}` : ''}
+        footer={<Button onClick={() => setNotif(null)}>Fermer</Button>}
+      >
+        {notif && (
+          <>
+            <pre className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{notif.texte}</pre>
+            <p className="mt-2 text-xs text-slate-400">
+              {notif.immeuble.proprietaireEmail
+                ? `Enregistré dans la messagerie propriétaire (${notif.immeuble.proprietaireEmail}).`
+                : "Enregistré dans la messagerie propriétaire. Pensez à renseigner l'e-mail du propriétaire depuis la page Immeubles."}
+            </p>
+          </>
         )}
       </Modal>
     </div>

@@ -36,40 +36,52 @@ export default function Paiements() {
   const [mois, setMois] = useState(moisCourantKey())
   const [modal, setModal] = useState(null)
   const [rappel, setRappel] = useState(null)
+  const [filtreImmeuble, setFiltreImmeuble] = useState('')
+  const [recherche, setRecherche] = useState('')
 
   const bauxActifs = state.baux.filter((b) => b.statut === 'actif')
 
-  const lignes = useMemo(() => {
+  const toutesLesLignes = useMemo(() => {
     return bauxActifs.map((b) => {
       const loc = state.locataires.find((l) => l.id === b.locataireId)
       const bien = state.biens.find((x) => x.id === b.bienId)
+      const immeuble = bien ? state.immeubles.find((i) => i.id === bien.immeubleId) : null
       const paiement = state.paiements.find((p) => p.bailId === b.id && p.mois === mois)
       const montantAttendu = Number(b.loyer) + Number(b.charges)
-      return { bail: b, loc, bien, paiement, montantAttendu }
+      return { bail: b, loc, bien, immeuble, paiement, montantAttendu }
     })
-  }, [bauxActifs, state.locataires, state.biens, state.paiements, mois])
+  }, [bauxActifs, state.locataires, state.biens, state.immeubles, state.paiements, mois])
 
-  const totalAttendu = lignes.reduce((s, l) => s + l.montantAttendu, 0)
-  const totalPaye = lignes.reduce((s, l) => s + (l.paiement?.statut === 'paye' || l.paiement?.statut === 'partiel' ? Number(l.paiement.montantPaye) : 0), 0)
+  const lignes = toutesLesLignes.filter((l) => {
+    const matchImmeuble = !filtreImmeuble || l.immeuble?.id === filtreImmeuble
+    const matchRecherche = !recherche || `${l.loc?.prenom} ${l.loc?.nom}`.toLowerCase().includes(recherche.toLowerCase())
+    return matchImmeuble && matchRecherche
+  })
+
+  const totalAttendu = toutesLesLignes.reduce((s, l) => s + l.montantAttendu, 0)
+  const totalPaye = toutesLesLignes.reduce((s, l) => s + (l.paiement?.statut === 'paye' || l.paiement?.statut === 'partiel' ? Number(l.paiement.montantPaye) : 0), 0)
 
   function openMarquerPaye(ligne) {
     setModal({
       bailId: ligne.bail.id,
       paiementId: ligne.paiement?.id,
+      montantAttendu: ligne.montantAttendu,
       montantPaye: ligne.paiement?.montantPaye ?? ligne.montantAttendu,
-      datePaiement: ligne.paiement?.datePaiement ?? new Date().toISOString().slice(0, 10),
+      datePaiement: ligne.paiement?.datePaiement || new Date().toISOString().slice(0, 10),
     })
   }
 
   function save(e) {
     e.preventDefault()
+    const montantPaye = Number(modal.montantPaye) || 0
+    const statut = montantPaye <= 0 ? 'retard' : montantPaye < modal.montantAttendu ? 'partiel' : 'paye'
     const payload = {
       bailId: modal.bailId,
       mois,
-      montantAttendu: lignes.find((l) => l.bail.id === modal.bailId)?.montantAttendu ?? 0,
-      montantPaye: Number(modal.montantPaye) || 0,
-      datePaiement: modal.datePaiement,
-      statut: 'paye',
+      montantAttendu: modal.montantAttendu,
+      montantPaye,
+      datePaiement: statut === 'retard' ? '' : modal.datePaiement,
+      statut,
     }
     if (modal.paiementId) paiements.update(modal.paiementId, payload)
     else paiements.add(payload)
@@ -80,11 +92,13 @@ export default function Paiements() {
     if (ligne.paiement && confirm('Annuler ce paiement ?')) paiements.remove(ligne.paiement.id)
   }
 
-  function relancer(ligne) {
+  function relancer(ligne, soldeRestant) {
     if (!ligne.loc) return
-    const texte = texteRappel(ligne.loc, ligne.montantAttendu, labelMois(mois))
+    const montantDu = soldeRestant ?? ligne.montantAttendu
+    const texte = texteRappel(ligne.loc, montantDu, labelMois(mois))
     messages.add({
       locataireId: ligne.loc.id,
+      destinataire: 'locataire',
       canal: 'email',
       sujet: `Rappel de loyer — ${labelMois(mois)}`,
       contenu: texte,
@@ -135,8 +149,29 @@ export default function Paiements() {
             <Card><p className="text-sm text-slate-500">Restant dû</p><p className="mt-1 text-xl font-bold text-red-600">{formatMontant(totalAttendu - totalPaye)}</p></Card>
           </div>
 
+          {toutesLesLignes.length > 0 && (
+            <div className="mb-4 flex flex-wrap gap-3">
+              <Input
+                placeholder="Rechercher un locataire..."
+                value={recherche}
+                onChange={(e) => setRecherche(e.target.value)}
+                className="max-w-sm"
+              />
+              {state.immeubles.length > 0 && (
+                <select
+                  value={filtreImmeuble}
+                  onChange={(e) => setFiltreImmeuble(e.target.value)}
+                  className="max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                >
+                  <option value="">Tous les immeubles</option>
+                  {state.immeubles.map((im) => <option key={im.id} value={im.id}>{im.nom}</option>)}
+                </select>
+              )}
+            </div>
+          )}
+
           {lignes.length === 0 ? (
-            <EmptyState title="Aucun encaissement" subtitle="Aucun bail actif pour le moment." />
+            <EmptyState title="Aucun encaissement" subtitle="Aucun bail actif ne correspond à ce filtre." />
           ) : (
             <Card>
               <div className="overflow-x-auto">
@@ -153,27 +188,39 @@ export default function Paiements() {
                   <tbody>
                     {lignes.map((l) => {
                       const info = statutPaiementInfo(l.paiement?.statut || 'attendu')
-                      const enRetard = l.paiement?.statut === 'retard' || (!l.paiement && mois < moisCourantKey())
+                      const soldeRestant = l.montantAttendu - Number(l.paiement?.montantPaye || 0)
+                      const meriteRelance =
+                        l.paiement?.statut === 'retard' ||
+                        l.paiement?.statut === 'partiel' ||
+                        (!l.paiement && mois < moisCourantKey())
                       return (
                         <tr key={l.bail.id} className="border-t border-slate-100">
                           <td className="py-2 pr-4 font-medium text-slate-800">{l.loc ? `${l.loc.prenom} ${l.loc.nom}` : '—'}</td>
-                          <td className="py-2 pr-4 text-slate-600">{l.bien ? l.bien.nom : '—'}</td>
+                          <td className="py-2 pr-4 text-slate-600">
+                            {l.bien ? l.bien.nom : '—'}
+                            {l.immeuble && <span className="block text-xs text-slate-400">{l.immeuble.nom}</span>}
+                          </td>
                           <td className="py-2 pr-4 text-slate-600">{formatMontant(l.montantAttendu)}</td>
                           <td className="py-2 pr-4">
                             <Badge tone={info.tone}>
                               {info.label}{l.paiement?.montantPaye ? ` — ${formatMontant(l.paiement.montantPaye)}` : ''}
                             </Badge>
+                            {l.paiement?.statut === 'partiel' && (
+                              <p className="mt-0.5 text-xs text-red-500">Solde dû : {formatMontant(soldeRestant)}</p>
+                            )}
                           </td>
                           <td className="py-2 text-right">
-                            {l.paiement?.statut === 'paye' || l.paiement?.statut === 'partiel' ? (
+                            {l.paiement?.statut === 'paye' ? (
                               <>
                                 <Button variant="ghost" onClick={() => openMarquerPaye(l)}>Modifier</Button>
                                 <Button variant="danger" onClick={() => annulerPaiement(l)}>Annuler</Button>
                               </>
                             ) : (
                               <>
-                                <Button variant="secondary" onClick={() => openMarquerPaye(l)}>Marquer payé</Button>
-                                {enRetard && <Button variant="danger" onClick={() => relancer(l)}>Relancer</Button>}
+                                <Button variant="secondary" onClick={() => openMarquerPaye(l)}>
+                                  {l.paiement?.statut === 'partiel' ? 'Compléter' : 'Marquer payé'}
+                                </Button>
+                                {meriteRelance && <Button variant="danger" onClick={() => relancer(l, soldeRestant)}>Relancer</Button>}
                               </>
                             )}
                           </td>
@@ -201,12 +248,26 @@ export default function Paiements() {
       >
         {modal && (
           <form id="form-paiement" onSubmit={save} className="space-y-4">
+            <p className="text-sm text-slate-500">Montant attendu : <strong className="text-slate-800">{formatMontant(modal.montantAttendu)}</strong></p>
             <Field label="Montant payé (€)">
               <Input type="number" min="0" required value={modal.montantPaye} onChange={(e) => setModal((m) => ({ ...m, montantPaye: e.target.value }))} />
             </Field>
-            <Field label="Date de paiement">
-              <Input type="date" required value={modal.datePaiement} onChange={(e) => setModal((m) => ({ ...m, datePaiement: e.target.value }))} />
-            </Field>
+            {Number(modal.montantPaye) > 0 && (
+              <Field label="Date de paiement">
+                <Input type="date" required value={modal.datePaiement} onChange={(e) => setModal((m) => ({ ...m, datePaiement: e.target.value }))} />
+              </Field>
+            )}
+            {(() => {
+              const montantPaye = Number(modal.montantPaye) || 0
+              const statutPrevu = montantPaye <= 0 ? 'retard' : montantPaye < modal.montantAttendu ? 'partiel' : 'paye'
+              const info = statutPaiementInfo(statutPrevu)
+              return (
+                <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-sm">
+                  <span className="text-slate-600">Statut enregistré :</span>
+                  <Badge tone={info.tone}>{info.label}</Badge>
+                </div>
+              )
+            })()}
           </form>
         )}
       </Modal>

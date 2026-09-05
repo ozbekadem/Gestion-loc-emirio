@@ -36,6 +36,16 @@ function loyerIndexe(values) {
 export default function Baux() {
   const { state, baux } = useStore()
   const [modal, setModal] = useState(null)
+  const [recherche, setRecherche] = useState('')
+  const [filtreImmeuble, setFiltreImmeuble] = useState('')
+
+  const bauxAffiches = state.baux.filter((b) => {
+    const loc = state.locataires.find((l) => l.id === b.locataireId)
+    const bien = state.biens.find((x) => x.id === b.bienId)
+    const matchImmeuble = !filtreImmeuble || bien?.immeubleId === filtreImmeuble
+    const matchRecherche = !recherche || `${loc?.prenom} ${loc?.nom}`.toLowerCase().includes(recherche.toLowerCase())
+    return matchImmeuble && matchRecherche
+  })
 
   function openNew() {
     setModal({ mode: 'create', values: emptyBail })
@@ -82,12 +92,28 @@ export default function Baux() {
           action={<Button className="mt-2" onClick={openNew}>Créer mon premier bail</Button>}
         />
       ) : (
-        <Card>
+        <>
+          <div className="mb-4 flex flex-wrap gap-3">
+            <Input
+              placeholder="Rechercher un locataire..."
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+              className="max-w-sm"
+            />
+            {state.immeubles.length > 0 && (
+              <Select value={filtreImmeuble} onChange={(e) => setFiltreImmeuble(e.target.value)} className="max-w-xs">
+                <option value="">Tous les immeubles</option>
+                {state.immeubles.map((im) => <option key={im.id} value={im.id}>{im.nom}</option>)}
+              </Select>
+            )}
+          </div>
+          <Card>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-slate-500">
                   <th className="pb-2 pr-4">Locataire</th>
+                  <th className="pb-2 pr-4">Immeuble</th>
                   <th className="pb-2 pr-4">Bien</th>
                   <th className="pb-2 pr-4">Début</th>
                   <th className="pb-2 pr-4">Fin</th>
@@ -98,13 +124,18 @@ export default function Baux() {
                 </tr>
               </thead>
               <tbody>
-                {state.baux.map((b) => {
+                {bauxAffiches.length === 0 && (
+                  <tr><td colSpan={9} className="py-8 text-center text-slate-400">Aucun bail ne correspond à ce filtre.</td></tr>
+                )}
+                {bauxAffiches.map((b) => {
                   const loc = state.locataires.find((l) => l.id === b.locataireId)
                   const bien = state.biens.find((x) => x.id === b.bienId)
+                  const immeuble = bien ? state.immeubles.find((i) => i.id === bien.immeubleId) : null
                   const info = statutInfo(b.statut)
                   return (
                     <tr key={b.id} className="border-t border-slate-100">
                       <td className="py-2 pr-4 font-medium text-slate-800">{loc ? `${loc.prenom} ${loc.nom}` : '—'}</td>
+                      <td className="py-2 pr-4 text-slate-600">{immeuble ? immeuble.nom : '—'}</td>
                       <td className="py-2 pr-4 text-slate-600">{bien ? bien.nom : '—'}</td>
                       <td className="py-2 pr-4 text-slate-600">{formatDate(b.dateDebut)}</td>
                       <td className="py-2 pr-4 text-slate-600">{formatDate(b.dateFin)}</td>
@@ -121,7 +152,8 @@ export default function Baux() {
               </tbody>
             </table>
           </div>
-        </Card>
+          </Card>
+        </>
       )}
 
       <Modal

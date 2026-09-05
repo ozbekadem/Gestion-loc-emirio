@@ -1,11 +1,11 @@
 import { makeId } from '../lib/id.js'
 
 const IMMEUBLES = [
-  { nom: 'Résidence Le Parc', adresse: '15 rue du Parc', codePostal: '6000', ville: 'Charleroi', type: 'Immeuble résidentiel' },
-  { nom: 'Résidence Les Acacias', adresse: '42 rue des Acacias', codePostal: '6040', ville: 'Jumet', type: 'Immeuble résidentiel' },
-  { nom: 'Immeuble Central', adresse: '8 place Communale', codePostal: '6001', ville: 'Marcinelle', type: 'Immeuble mixte' },
-  { nom: 'Résidence Bellevue', adresse: '23 avenue Bellevue', codePostal: '6060', ville: 'Gilly', type: 'Immeuble résidentiel' },
-  { nom: 'Le Clos Fleuri', adresse: '5 rue des Fleurs', codePostal: '5000', ville: 'Namur', type: 'Immeuble résidentiel' },
+  { nom: 'Résidence Le Parc', adresse: '15 rue du Parc', codePostal: '6000', ville: 'Charleroi', type: 'Immeuble résidentiel', proprietaireNom: 'Jean Ozbek', proprietaireEmail: 'jean.ozbek@example.com', proprietaireTelephone: '0475 11 22 33' },
+  { nom: 'Résidence Les Acacias', adresse: '42 rue des Acacias', codePostal: '6040', ville: 'Jumet', type: 'Immeuble résidentiel', proprietaireNom: 'Jean Ozbek', proprietaireEmail: 'jean.ozbek@example.com', proprietaireTelephone: '0475 11 22 33' },
+  { nom: 'Immeuble Central', adresse: '8 place Communale', codePostal: '6001', ville: 'Marcinelle', type: 'Immeuble mixte', proprietaireNom: 'SPRL Immo Renard', proprietaireEmail: 'gestion@immo-renard.be', proprietaireTelephone: '071 22 33 44' },
+  { nom: 'Résidence Bellevue', adresse: '23 avenue Bellevue', codePostal: '6060', ville: 'Gilly', type: 'Immeuble résidentiel', proprietaireNom: '', proprietaireEmail: '', proprietaireTelephone: '' },
+  { nom: 'Le Clos Fleuri', adresse: '5 rue des Fleurs', codePostal: '5000', ville: 'Namur', type: 'Immeuble résidentiel', proprietaireNom: 'Michel Faure', proprietaireEmail: 'michel.faure@example.com', proprietaireTelephone: '081 55 66 77' },
 ]
 
 const LOCATAIRES_NOMS = [
@@ -221,6 +221,7 @@ export function seedData() {
       {
         id: makeId(),
         locataireId: locataires[7].id,
+        destinataire: 'locataire',
         canal: 'email',
         sujet: 'Rappel de loyer — Juillet 2026',
         contenu: `Bonjour ${locataires[7].prenom}, nous n'avons pas encore reçu le paiement du loyer de juillet. Merci de régulariser dans les meilleurs délais.`,

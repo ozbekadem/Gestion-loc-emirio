@@ -5,7 +5,10 @@ import { formatMontant } from '../lib/utils.js'
 
 const TYPES = ['Immeuble résidentiel', 'Maison', 'Immeuble mixte', 'Local commercial', 'Autre']
 
-const emptyImmeuble = { nom: '', adresse: '', codePostal: '', ville: '', type: TYPES[0] }
+const emptyImmeuble = {
+  nom: '', adresse: '', codePostal: '', ville: '', type: TYPES[0],
+  proprietaireNom: '', proprietaireEmail: '', proprietaireTelephone: '',
+}
 const emptyBien = { nom: '', etage: '', surface: '', loyerBase: '', charges: '' }
 
 export default function Immeubles() {
@@ -87,6 +90,9 @@ export default function Immeubles() {
                     <h3 className="text-lg font-semibold text-slate-900">{im.nom}</h3>
                     <p className="text-sm text-slate-500">{im.adresse}, {im.codePostal} {im.ville}</p>
                     <Badge tone="slate">{im.type}</Badge>
+                    {im.proprietaireNom && (
+                      <p className="mt-1 text-xs text-slate-400">Propriétaire : {im.proprietaireNom}{im.proprietaireEmail ? ` — ${im.proprietaireEmail}` : ''}</p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="secondary" onClick={() => setExpanded(isOpen ? null : im.id)}>
@@ -181,6 +187,23 @@ export default function Immeubles() {
                 {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </Select>
             </Field>
+
+            <div className="rounded-lg border border-slate-200 p-3">
+              <p className="mb-3 text-sm font-semibold text-slate-700">Propriétaire</p>
+              <div className="space-y-4">
+                <Field label="Nom du propriétaire">
+                  <Input value={modalImmeuble.values.proprietaireNom} onChange={(e) => setModalImmeuble((m) => ({ ...m, values: { ...m.values, proprietaireNom: e.target.value } }))} />
+                </Field>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="E-mail">
+                    <Input type="email" value={modalImmeuble.values.proprietaireEmail} onChange={(e) => setModalImmeuble((m) => ({ ...m, values: { ...m.values, proprietaireEmail: e.target.value } }))} />
+                  </Field>
+                  <Field label="Téléphone">
+                    <Input value={modalImmeuble.values.proprietaireTelephone} onChange={(e) => setModalImmeuble((m) => ({ ...m, values: { ...m.values, proprietaireTelephone: e.target.value } }))} />
+                  </Field>
+                </div>
+              </div>
+            </div>
           </form>
         )}
       </Modal>
