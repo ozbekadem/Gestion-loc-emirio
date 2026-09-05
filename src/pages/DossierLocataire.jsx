@@ -1,8 +1,23 @@
 import React, { useMemo, useRef, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, Button, Badge, Modal, Field, Input, Select, Textarea, EmptyState } from '../components/ui.jsx'
-import { formatDate, formatMontant, labelMois, statutPaiementInfo } from '../lib/utils.js'
+import { formatDate, formatMontant, labelMois, moisCourant, statutPaiementInfo } from '../lib/utils.js'
 import { itemsAdminBail } from '../lib/taches.js'
+
+function texteRappel(loc, montant, moisLabel) {
+  return [
+    `Objet : Rappel de loyer — ${moisLabel}`,
+    '',
+    `Bonjour ${loc.prenom},`,
+    '',
+    `Nous n'avons pas encore reçu le paiement de votre loyer de ${moisLabel}, d'un montant de ${formatMontant(montant)}.`,
+    "Merci de bien vouloir régulariser cette situation dans les meilleurs délais.",
+    '',
+    "N'hésitez pas à nous contacter si un problème empêche ce paiement.",
+    '',
+    'Cordialement,',
+  ].join('\n')
+}
 
 const STATUTS_LOCATAIRE = {
   excellent_payeur: { label: 'Excellent payeur', tone: 'green' },
@@ -48,6 +63,7 @@ export default function DossierLocataire({ locataireId, onBack }) {
   const [typeUpload, setTypeUpload] = useState('carte_identite')
   const [modalEdl, setModalEdl] = useState(null)
   const [apercuDocument, setApercuDocument] = useState(null)
+  const [rappel, setRappel] = useState(null)
 
   const locataire = state.locataires.find((l) => l.id === locataireId)
   const bien = locataire ? state.biens.find((b) => b.id === locataire.bienId) : null
@@ -56,6 +72,11 @@ export default function DossierLocataire({ locataireId, onBack }) {
   const docsLocataire = state.documents.filter((d) => d.locataireId === locataireId)
   const edlBail = bail ? state.etatsDesLieux.filter((e) => e.bailId === bail.id) : []
   const messagesLocataire = [...state.messages].filter((m) => m.locataireId === locataireId).sort((a, b) => new Date(b.date) - new Date(a.date))
+
+  const paiementMoisCourant = useMemo(() => {
+    if (!bail) return null
+    return state.paiements.find((p) => p.bailId === bail.id && p.mois === moisCourant()) || null
+  }, [state.paiements, bail])
 
   const paiementsRecents = useMemo(() => {
     if (!bail) return []
@@ -123,7 +144,30 @@ export default function DossierLocataire({ locataireId, onBack }) {
     baux.update(bail.id, { [cle]: new Date().toISOString().slice(0, 10) })
   }
 
+  function enregistrerNotes(valeur) {
+    locataires.update(locataireId, { notes: valeur })
+  }
+
+  function relancer() {
+    if (!bail) return
+    const montantAttendu = Number(bail.loyer) + Number(bail.charges)
+    const montantDu = montantAttendu - Number(paiementMoisCourant?.montantPaye || 0)
+    const texte = texteRappel(locataire, montantDu, labelMois(moisCourant()))
+    messages.add({
+      locataireId,
+      destinataire: 'locataire',
+      canal: 'email',
+      sujet: `Rappel de loyer — ${labelMois(moisCourant())}`,
+      contenu: texte,
+      date: new Date().toISOString().slice(0, 10),
+      sens: 'envoye',
+    })
+    setRappel(texte)
+  }
+
   const itemsAdmin = bail ? itemsAdminBail(bail) : []
+  const statutMoisCourant = bail ? statutPaiementInfo(paiementMoisCourant?.statut || 'attendu') : null
+  const meriteRelance = bail && (paiementMoisCourant?.statut === 'retard' || paiementMoisCourant?.statut === 'partiel')
 
   return (
     <div>
@@ -149,6 +193,15 @@ export default function DossierLocataire({ locataireId, onBack }) {
             <div className="flex justify-between"><dt className="text-slate-500">Téléphone</dt><dd className="text-slate-800">{locataire.telephone || '—'}</dd></div>
             <div className="flex justify-between"><dt className="text-slate-500">Entrée</dt><dd className="text-slate-800">{formatDate(locataire.dateEntree)}</dd></div>
           </dl>
+          <div className="mt-3 border-t border-slate-100 pt-3">
+            <p className="mb-1.5 text-xs font-medium text-slate-500">Notes internes</p>
+            <Textarea
+              placeholder="Ex. : accord de paiement en 2 fois, difficulté financière temporaire..."
+              defaultValue={locataire.notes || ''}
+              onBlur={(e) => enregistrerNotes(e.target.value)}
+              rows={3}
+            />
+          </div>
         </Card>
 
         <Card>
@@ -166,7 +219,10 @@ export default function DossierLocataire({ locataireId, onBack }) {
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Historique des paiements</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-700">Historique des paiements</h2>
+            {statutMoisCourant && <Badge tone={statutMoisCourant.tone}>Ce mois : {statutMoisCourant.label}</Badge>}
+          </div>
           {paiementsRecents.length === 0 ? (
             <p className="text-sm text-slate-500">Aucun paiement enregistré.</p>
           ) : (
@@ -176,11 +232,14 @@ export default function DossierLocataire({ locataireId, onBack }) {
                 return (
                   <div key={p.id} className="flex items-center justify-between text-sm">
                     <span className="text-slate-600">{labelMois(p.mois)}</span>
-                    <Badge tone={info.tone}>{info.label}</Badge>
+                    <Badge tone={info.tone}>{info.label}{p.montantPaye ? ` — ${formatMontant(p.montantPaye)}` : ''}</Badge>
                   </div>
                 )
               })}
             </div>
+          )}
+          {meriteRelance && (
+            <Button variant="danger" className="mt-3 w-full" onClick={relancer}>Envoyer une relance pour {labelMois(moisCourant())}</Button>
           )}
         </Card>
       </div>
@@ -289,6 +348,15 @@ export default function DossierLocataire({ locataireId, onBack }) {
           </div>
         )}
       </Card>
+
+      <Modal open={!!rappel} onClose={() => setRappel(null)} title="Relance enregistrée" footer={<Button onClick={() => setRappel(null)}>Fermer</Button>}>
+        {rappel && (
+          <>
+            <pre className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{rappel}</pre>
+            <p className="mt-2 text-xs text-slate-400">Cette relance a été enregistrée dans la messagerie du locataire.</p>
+          </>
+        )}
+      </Modal>
 
       <Modal open={!!apercuDocument} onClose={() => setApercuDocument(null)} title={apercuDocument?.nom} footer={<Button onClick={() => setApercuDocument(null)}>Fermer</Button>}>
         {apercuDocument?.mime?.startsWith('image/') ? (

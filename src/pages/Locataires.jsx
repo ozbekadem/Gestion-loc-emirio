@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
-import { Card, PageHeader, Button, Modal, Field, Input, Select, EmptyState, Badge } from '../components/ui.jsx'
-import { formatDate } from '../lib/utils.js'
+import { Card, PageHeader, Button, Modal, Field, Input, Select, Textarea, EmptyState, Badge } from '../components/ui.jsx'
+import { formatDate, moisCourant, statutPaiementInfo } from '../lib/utils.js'
 import DossierLocataire from './DossierLocataire.jsx'
 
 const STATUTS = [
@@ -11,20 +11,42 @@ const STATUTS = [
   { value: 'nouveau', label: 'Nouveau', tone: 'slate' },
 ]
 
-const emptyLocataire = { nom: '', prenom: '', email: '', telephone: '', bienId: '', dateEntree: '', statut: 'nouveau' }
+const FILTRES_PAIEMENT = [
+  { value: '', label: 'Tous les paiements' },
+  { value: 'retard', label: 'En retard ce mois' },
+  { value: 'partiel', label: 'Partiel ce mois' },
+  { value: 'paye', label: 'Payé ce mois' },
+]
+
+const emptyLocataire = { nom: '', prenom: '', email: '', telephone: '', bienId: '', dateEntree: '', statut: 'nouveau', notes: '' }
 
 export default function Locataires() {
   const { state, locataires } = useStore()
   const [modal, setModal] = useState(null)
   const [search, setSearch] = useState('')
   const [filtreImmeuble, setFiltreImmeuble] = useState('')
+  const [filtrePaiement, setFiltrePaiement] = useState('')
   const [dossierId, setDossierId] = useState(null)
+
+  const mois = moisCourant()
+
+  const paiementDuMois = useMemo(() => {
+    const map = new Map()
+    state.locataires.forEach((l) => {
+      const bail = state.baux.find((b) => b.locataireId === l.id && b.statut === 'actif')
+      if (!bail) return
+      const paiement = state.paiements.find((p) => p.bailId === bail.id && p.mois === mois)
+      map.set(l.id, paiement?.statut || 'attendu')
+    })
+    return map
+  }, [state.locataires, state.baux, state.paiements, mois])
 
   const list = state.locataires.filter((l) => {
     const bien = state.biens.find((b) => b.id === l.bienId)
     const matchImmeuble = !filtreImmeuble || bien?.immeubleId === filtreImmeuble
     const matchSearch = `${l.prenom} ${l.nom} ${l.email}`.toLowerCase().includes(search.toLowerCase())
-    return matchImmeuble && matchSearch
+    const matchPaiement = !filtrePaiement || paiementDuMois.get(l.id) === filtrePaiement
+    return matchImmeuble && matchSearch && matchPaiement
   })
 
   if (dossierId) {
@@ -77,6 +99,9 @@ export default function Locataires() {
               {state.immeubles.map((im) => <option key={im.id} value={im.id}>{im.nom}</option>)}
             </Select>
           )}
+          <Select value={filtrePaiement} onChange={(e) => setFiltrePaiement(e.target.value)} className="max-w-xs">
+            {FILTRES_PAIEMENT.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+          </Select>
         </div>
       )}
 
@@ -92,6 +117,8 @@ export default function Locataires() {
             const bien = state.biens.find((b) => b.id === l.bienId)
             const immeuble = bien ? state.immeubles.find((i) => i.id === bien.immeubleId) : null
             const info = statutInfo(l.statut)
+            const statutPaiement = paiementDuMois.get(l.id)
+            const paiementInfo = statutPaiement ? statutPaiementInfo(statutPaiement) : null
             return (
               <Card key={l.id}>
                 <div className="flex items-start justify-between">
@@ -100,12 +127,16 @@ export default function Locataires() {
                     <p className="text-sm text-slate-500">{l.email || 'Pas d\'email'}</p>
                     <p className="text-sm text-slate-500">{l.telephone || 'Pas de téléphone'}</p>
                   </div>
-                  <Badge tone={info.tone}>{info.label}</Badge>
+                  <div className="flex flex-col items-end gap-1.5">
+                    <Badge tone={info.tone}>{info.label}</Badge>
+                    {paiementInfo && <Badge tone={paiementInfo.tone}>Ce mois : {paiementInfo.label}</Badge>}
+                  </div>
                 </div>
                 <div className="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-600">
                   <p>{bien ? bien.nom : <span className="text-slate-400">Aucun bien assigné</span>}</p>
                   {immeuble && <p className="text-slate-400">{immeuble.nom}</p>}
                   <p className="mt-1 text-slate-400">Entrée : {formatDate(l.dateEntree)}</p>
+                  {l.notes && <p className="mt-2 rounded-md bg-slate-50 px-2 py-1.5 text-xs text-slate-500">{l.notes}</p>}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button variant="secondary" onClick={() => setDossierId(l.id)}>Voir le dossier</Button>
@@ -164,6 +195,13 @@ export default function Locataires() {
                 </Select>
               </Field>
             </div>
+            <Field label="Notes internes">
+              <Textarea
+                placeholder="Ex. : accord de paiement en 2 fois, difficulté financière temporaire..."
+                value={modal.values.notes || ''}
+                onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, notes: e.target.value } }))}
+              />
+            </Field>
           </form>
         )}
       </Modal>

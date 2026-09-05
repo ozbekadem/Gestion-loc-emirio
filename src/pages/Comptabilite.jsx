@@ -10,28 +10,60 @@ function anneesDisponibles(paiements, travaux) {
   return [...annees].sort((a, b) => b - a)
 }
 
+function immeubleDuBail(state, bailId) {
+  const bail = state.baux.find((b) => b.id === bailId)
+  const bien = bail ? state.biens.find((b) => b.id === bail.bienId) : null
+  return bien?.immeubleId || null
+}
+
+function immeubleDuTravail(t) {
+  return t.immeubleId || null
+}
+
 export default function Comptabilite() {
   const { state } = useStore()
   const [annee, setAnnee] = useState(new Date().getFullYear())
+  const [filtreImmeuble, setFiltreImmeuble] = useState('')
 
   const annees = anneesDisponibles(state.paiements, state.travaux)
 
+  const paiementsAnnee = useMemo(
+    () => state.paiements.filter((p) => (p.statut === 'paye' || p.statut === 'partiel') && Number(p.mois.split('-')[0]) === annee),
+    [state.paiements, annee],
+  )
+  const travauxAnnee = useMemo(
+    () => state.travaux.filter((t) => t.date && new Date(t.date).getFullYear() === annee),
+    [state.travaux, annee],
+  )
+
   const parMois = useMemo(() => {
     const rows = Array.from({ length: 12 }, (_, i) => ({ mois: i, revenus: 0, depenses: 0 }))
-    state.paiements
-      .filter((p) => p.statut === 'paye' && Number(p.mois.split('-')[0]) === annee)
+    paiementsAnnee
+      .filter((p) => !filtreImmeuble || immeubleDuBail(state, p.bailId) === filtreImmeuble)
       .forEach((p) => {
         const m = Number(p.mois.split('-')[1]) - 1
         rows[m].revenus += Number(p.montantPaye) || 0
       })
-    state.travaux
-      .filter((t) => t.date && new Date(t.date).getFullYear() === annee)
+    travauxAnnee
+      .filter((t) => !filtreImmeuble || immeubleDuTravail(t) === filtreImmeuble)
       .forEach((t) => {
         const m = new Date(t.date).getMonth()
         rows[m].depenses += Number(t.cout) || 0
       })
     return rows
-  }, [state.paiements, state.travaux, annee])
+  }, [paiementsAnnee, travauxAnnee, filtreImmeuble, state])
+
+  const parImmeuble = useMemo(() => {
+    return state.immeubles.map((im) => {
+      const revenus = paiementsAnnee
+        .filter((p) => immeubleDuBail(state, p.bailId) === im.id)
+        .reduce((s, p) => s + (Number(p.montantPaye) || 0), 0)
+      const depenses = travauxAnnee
+        .filter((t) => immeubleDuTravail(t) === im.id)
+        .reduce((s, t) => s + (Number(t.cout) || 0), 0)
+      return { immeuble: im, revenus, depenses }
+    })
+  }, [state, paiementsAnnee, travauxAnnee])
 
   const totalRevenus = parMois.reduce((s, r) => s + r.revenus, 0)
   const totalDepenses = parMois.reduce((s, r) => s + r.depenses, 0)
@@ -42,9 +74,17 @@ export default function Comptabilite() {
         title="Comptabilité"
         subtitle="Bilan annuel des loyers encaissés et des dépenses"
         action={
-          <Select value={annee} onChange={(e) => setAnnee(Number(e.target.value))} className="max-w-[8rem]">
-            {annees.map((a) => <option key={a} value={a}>{a}</option>)}
-          </Select>
+          <div className="flex items-center gap-2">
+            {state.immeubles.length > 0 && (
+              <Select value={filtreImmeuble} onChange={(e) => setFiltreImmeuble(e.target.value)} className="max-w-xs">
+                <option value="">Tous les immeubles</option>
+                {state.immeubles.map((im) => <option key={im.id} value={im.id}>{im.nom}</option>)}
+              </Select>
+            )}
+            <Select value={annee} onChange={(e) => setAnnee(Number(e.target.value))} className="max-w-[8rem]">
+              {annees.map((a) => <option key={a} value={a}>{a}</option>)}
+            </Select>
+          </div>
         }
       />
 
@@ -55,7 +95,7 @@ export default function Comptabilite() {
       </div>
 
       <Card>
-        <h2 className="mb-4 text-base font-semibold text-slate-900">Bilan annuel {annee}</h2>
+        <h2 className="mb-4 text-base font-semibold text-slate-900">Bilan annuel {annee}{filtreImmeuble ? ` — ${state.immeubles.find((im) => im.id === filtreImmeuble)?.nom}` : ''}</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -79,6 +119,34 @@ export default function Comptabilite() {
           </table>
         </div>
       </Card>
+
+      {!filtreImmeuble && state.immeubles.length > 0 && (
+        <Card className="mt-6">
+          <h2 className="mb-4 text-base font-semibold text-slate-900">Répartition par immeuble — {annee}</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-slate-500">
+                  <th className="pb-2 pr-4">Immeuble</th>
+                  <th className="pb-2 pr-4">Revenus</th>
+                  <th className="pb-2 pr-4">Dépenses</th>
+                  <th className="pb-2 pr-4">Solde</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parImmeuble.map(({ immeuble, revenus, depenses }) => (
+                  <tr key={immeuble.id} className="border-t border-slate-100">
+                    <td className="py-2 pr-4 font-medium text-slate-800">{immeuble.nom}</td>
+                    <td className="py-2 pr-4 text-emerald-600">{formatMontant(revenus)}</td>
+                    <td className="py-2 pr-4 text-red-600">{formatMontant(depenses)}</td>
+                    <td className="py-2 pr-4 font-medium text-slate-800">{formatMontant(revenus - depenses)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
     </div>
   )
 }
