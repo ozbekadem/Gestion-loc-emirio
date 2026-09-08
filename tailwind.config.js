@@ -61,6 +61,32 @@ export default {
           700: '#b91c1c',
         },
       },
+      backgroundImage: {
+        'gradient-brand': 'linear-gradient(135deg, #3f61bd 0%, #28408a 55%, #1c2a52 100%)',
+        'gradient-accent': 'linear-gradient(135deg, #eebd52 0%, #cc841c 60%, #a86615 100%)',
+        'gradient-sidebar': 'linear-gradient(180deg, #1c2545 0%, #161d38 45%, #10152a 100%)',
+        'gradient-mesh': 'radial-gradient(60rem 30rem at 100% -10%, rgba(69,105,199,0.10), transparent 60%), radial-gradient(50rem 26rem at -10% 0%, rgba(204,132,28,0.08), transparent 55%)',
+        'gradient-card-brand': 'linear-gradient(135deg, rgba(69,105,199,0.10), rgba(69,105,199,0.02))',
+        'gradient-card-accent': 'linear-gradient(135deg, rgba(204,132,28,0.12), rgba(204,132,28,0.02))',
+        'gradient-card-success': 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.02))',
+        'gradient-card-danger': 'linear-gradient(135deg, rgba(239,68,68,0.10), rgba(239,68,68,0.02))',
+      },
+      boxShadow: {
+        soft: '0 1px 2px rgba(15,23,42,0.04), 0 10px 30px -14px rgba(15,23,42,0.14)',
+        'soft-lg': '0 2px 4px rgba(15,23,42,0.05), 0 24px 48px -20px rgba(15,23,42,0.22)',
+        'glow-brand': '0 10px 30px -8px rgba(49,81,171,0.45)',
+        'glow-accent': '0 10px 26px -8px rgba(204,132,28,0.45)',
+        'inner-line': 'inset 0 1px 0 rgba(255,255,255,0.06)',
+      },
+      keyframes: {
+        fadeUp: {
+          '0%': { opacity: 0, transform: 'translateY(6px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        fadeUp: 'fadeUp .35s ease-out both',
+      },
     },
   },
   plugins: [],

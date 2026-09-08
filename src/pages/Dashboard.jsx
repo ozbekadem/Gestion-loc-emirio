@@ -46,19 +46,20 @@ export default function Dashboard() {
       <PageHeader
         title="Tableau de bord"
         subtitle="Vue d'ensemble de votre patrimoine locatif"
+        icon="🏠"
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Immeubles" value={immeubles.length} />
-        <StatCard label="Locataires actifs" value={locataires.length} />
-        <StatCard label="Loyers attendus (mois)" value={formatMontant(kpis.attendu)} tone="blue" />
-        <StatCard label="Loyers encaissés (mois)" value={formatMontant(kpis.encaisse)} tone="green" />
-        <StatCard label="Locataires en retard" value={kpis.locatairesRetard} tone={kpis.locatairesRetard > 0 ? 'red' : 'slate'} />
-        <StatCard label="Travaux en cours" value={kpis.travauxEnCours} tone="amber" />
-        <StatCard label="Candidatures en attente" value={kpis.candidaturesEnAttente} tone="blue" />
-        <StatCard label="Baux actifs" value={kpis.bauxActifs} />
-        <StatCard label="Taux d'occupation" value={`${kpis.tauxOccupation}%`} tone="blue" />
-        <StatCard label="Taux de recouvrement (mois)" value={`${kpis.tauxRecouvrement}%`} tone={kpis.tauxRecouvrement >= 90 ? 'green' : 'amber'} />
+        <StatCard label="Immeubles" value={immeubles.length} icon="🏢" />
+        <StatCard label="Locataires actifs" value={locataires.length} icon="👤" />
+        <StatCard label="Loyers attendus (mois)" value={formatMontant(kpis.attendu)} tone="blue" icon="💶" />
+        <StatCard label="Loyers encaissés (mois)" value={formatMontant(kpis.encaisse)} tone="green" icon="✅" />
+        <StatCard label="Locataires en retard" value={kpis.locatairesRetard} tone={kpis.locatairesRetard > 0 ? 'red' : 'slate'} icon="⏰" />
+        <StatCard label="Travaux en cours" value={kpis.travauxEnCours} tone="amber" icon="🛠️" />
+        <StatCard label="Candidatures en attente" value={kpis.candidaturesEnAttente} tone="blue" icon="📥" />
+        <StatCard label="Baux actifs" value={kpis.bauxActifs} icon="📄" />
+        <StatCard label="Taux d'occupation" value={`${kpis.tauxOccupation}%`} tone="blue" icon="📊" />
+        <StatCard label="Taux de recouvrement (mois)" value={`${kpis.tauxRecouvrement}%`} tone={kpis.tauxRecouvrement >= 90 ? 'green' : 'amber'} icon="🎯" />
       </div>
 
       <Card className="mt-8">

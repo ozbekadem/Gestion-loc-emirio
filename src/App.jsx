@@ -78,21 +78,21 @@ export default function App() {
   return (
     <div className="flex min-h-screen bg-slate-50">
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r border-slate-200 bg-white transition-transform lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-gradient-sidebar shadow-soft-lg transition-transform lg:static lg:translate-x-0 ${
           navOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex h-16 items-center gap-2 border-b border-slate-200 px-5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent-500 to-accent-600 text-sm font-extrabold text-white shadow-sm">E</span>
+        <div className="flex h-16 items-center gap-2 border-b border-white/10 px-5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-accent text-sm font-extrabold text-white shadow-glow-accent">E</span>
           <div className="leading-tight">
-            <p className="text-base font-extrabold tracking-tight text-slate-900">Emirio</p>
+            <p className="text-base font-extrabold tracking-tight text-white">Emirio</p>
             <p className="text-[11px] text-slate-400">Gestion locative</p>
           </div>
         </div>
         <nav className="space-y-4 overflow-y-auto p-3" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
           {NAV_SECTIONS.map((section) => (
             <div key={section.label}>
-              <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{section.label}</p>
+              <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{section.label}</p>
               <div className="space-y-0.5">
                 {section.items.map((item) => (
                   <button
@@ -101,16 +101,16 @@ export default function App() {
                       setActive(item.id)
                       setNavOpen(false)
                     }}
-                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                    className={`relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
                       item.id === active
-                        ? 'bg-brand-50 text-brand-700'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        ? 'bg-gradient-brand text-white shadow-glow-brand'
+                        : 'text-slate-300 hover:bg-white/5 hover:text-white'
                     }`}
                   >
                     <span aria-hidden>{item.icon}</span>
                     <span className="flex-1 text-left">{item.label}</span>
                     {item.id === 'taches' && nbTachesUrgentes > 0 && (
-                      <span className="rounded-full bg-danger-600 px-1.5 py-0.5 text-xs font-semibold text-white">{nbTachesUrgentes}</span>
+                      <span className="rounded-full bg-danger-500 px-1.5 py-0.5 text-xs font-semibold text-white shadow-glow-accent">{nbTachesUrgentes}</span>
                     )}
                     {item.id === 'reversements' && nbReversementsEnAttente > 0 && (
                       <span className="rounded-full bg-warning-500 px-1.5 py-0.5 text-xs font-semibold text-white">{nbReversementsEnAttente}</span>
@@ -127,8 +127,8 @@ export default function App() {
         <div className="fixed inset-0 z-30 bg-slate-900/30 lg:hidden" onClick={() => setNavOpen(false)} />
       )}
 
-      <div className="flex min-h-screen flex-1 flex-col">
-        <header className="flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:hidden">
+      <div className="flex min-h-screen flex-1 flex-col bg-gradient-mesh">
+        <header className="flex h-16 items-center gap-3 border-b border-slate-200 bg-white/80 px-4 backdrop-blur-sm lg:hidden">
           <button
             onClick={() => setNavOpen(true)}
             className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
