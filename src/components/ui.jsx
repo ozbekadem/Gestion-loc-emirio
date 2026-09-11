@@ -113,7 +113,7 @@ const STAT_TONE = {
   blue: { text: 'text-brand-600', chip: 'bg-brand-100 text-brand-600', bg: 'bg-gradient-card-brand' },
 }
 
-export function StatCard({ label, value, tone = 'slate', hint, icon }) {
+export function StatCard({ label, value, tone = 'slate', hint, icon, trend }) {
   const t = STAT_TONE[tone] || STAT_TONE.slate
   return (
     <Card className={`relative overflow-hidden ${t.bg}`}>
@@ -121,8 +121,16 @@ export function StatCard({ label, value, tone = 'slate', hint, icon }) {
         <p className="text-sm font-medium text-slate-500">{label}</p>
         {icon && <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm ${t.chip}`} aria-hidden>{icon}</span>}
       </div>
-      <p className={`mt-2 text-2xl font-bold tracking-tight ${t.text}`}>{value}</p>
-      {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
+      <div className="mt-2 flex items-baseline gap-2">
+        <p className={`text-2xl font-bold tracking-tight ${t.text}`}>{value}</p>
+        {trend && Number.isFinite(trend.value) && (
+          <span className={`inline-flex items-center gap-0.5 text-xs font-semibold ${trend.value > 0 ? 'text-success-600' : trend.value < 0 ? 'text-danger-600' : 'text-slate-400'}`}>
+            {trend.value > 0 ? '↑' : trend.value < 0 ? '↓' : '→'}
+            {Math.abs(trend.value)}{trend.suffix || ''}
+          </span>
+        )}
+      </div>
+      {(hint || trend?.label) && <p className="mt-1 text-xs text-slate-400">{hint || trend.label}</p>}
     </Card>
   )
 }
