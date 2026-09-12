@@ -1,12 +1,16 @@
 import React, { useState } from 'react'
 import { useStore } from '../lib/store.jsx'
-import { Card, PageHeader, Button, Modal, Field, Input, EmptyState } from '../components/ui.jsx'
+import { Card, PageHeader, Button, Modal, Field, Input, Select, EmptyState } from '../components/ui.jsx'
 
 const emptyPrestataire = { nom: '', metier: '', telephone: '', email: '', adresse: '' }
 
 export default function Prestataires() {
   const { state, prestataires } = useStore()
   const [modal, setModal] = useState(null)
+  const [filtreMetier, setFiltreMetier] = useState('')
+
+  const metiers = [...new Set(state.prestataires.map((p) => p.metier).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+  const listeFiltree = state.prestataires.filter((p) => !filtreMetier || p.metier === filtreMetier)
 
   function openNew() {
     setModal({ mode: 'create', values: emptyPrestataire })
@@ -33,11 +37,20 @@ export default function Prestataires() {
         action={<Button onClick={openNew}>+ Ajouter le prestataire</Button>}
       />
 
+      {metiers.length > 0 && (
+        <Select className="mb-4 max-w-xs" value={filtreMetier} onChange={(e) => setFiltreMetier(e.target.value)}>
+          <option value="">Tous les métiers</option>
+          {metiers.map((m) => <option key={m} value={m}>{m}</option>)}
+        </Select>
+      )}
+
       {state.prestataires.length === 0 ? (
         <EmptyState title="Aucun prestataire pour le moment" subtitle="Ajoutez vos artisans et professionnels de confiance." action={<Button className="mt-2" onClick={openNew}>Ajouter un prestataire</Button>} />
+      ) : listeFiltree.length === 0 ? (
+        <EmptyState title="Aucun prestataire pour ce métier" subtitle="Ajoutez-en un ou choisissez un autre métier dans le filtre." action={<Button className="mt-2" onClick={openNew}>Ajouter un prestataire</Button>} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {state.prestataires.map((p) => (
+          {listeFiltree.map((p) => (
             <Card key={p.id}>
               <h3 className="font-semibold text-slate-900">{p.nom}</h3>
               <p className="text-sm text-slate-500">{p.metier || 'Métier non renseigné'}</p>
@@ -72,7 +85,10 @@ export default function Prestataires() {
               <Input required value={modal.values.nom} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, nom: e.target.value } }))} />
             </Field>
             <Field label="Métier">
-              <Input placeholder="Plombier, électricien, ..." value={modal.values.metier} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, metier: e.target.value } }))} />
+              <Input list="metiers-existants" placeholder="Plombier, électricien, ..." value={modal.values.metier} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, metier: e.target.value } }))} />
+              <datalist id="metiers-existants">
+                {metiers.map((m) => <option key={m} value={m} />)}
+              </datalist>
             </Field>
             <Field label="Téléphone">
               <Input value={modal.values.telephone} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, telephone: e.target.value } }))} />

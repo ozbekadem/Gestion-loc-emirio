@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, Textarea, Badge, EmptyState } from '../components/ui.jsx'
-import { formatDate, formatMontant } from '../lib/utils.js'
+import { formatDate, formatMontant, lienWhatsapp, lienEmail } from '../lib/utils.js'
+import { makeId } from '../lib/id.js'
 
 const STATUTS = [
   { value: 'a_planifier', label: 'À planifier', tone: 'slate' },
@@ -22,7 +23,7 @@ const URGENCES = [
 
 const emptyTravail = {
   immeubleId: '', bienId: '', titre: '', description: '', prestataireId: '', statut: 'a_planifier', cout: '', date: '',
-  categorie: CATEGORIES[0], urgence: 'normale',
+  categorie: CATEGORIES[0], urgence: 'normale', photos: [], rapportPrestataire: '', dateRapport: '',
 }
 
 export default function Travaux() {
@@ -30,12 +31,15 @@ export default function Travaux() {
   const [modal, setModal] = useState(null)
   const [filtreImmeuble, setFiltreImmeuble] = useState('')
   const [notif, setNotif] = useState(null)
+  const [contact, setContact] = useState(null)
+  const [momentPhoto, setMomentPhoto] = useState('avant')
+  const photoInput = useRef(null)
 
   function openNew() {
     setModal({ mode: 'create', values: emptyTravail })
   }
   function openEdit(t) {
-    setModal({ mode: 'edit', id: t.id, values: { ...t } })
+    setModal({ mode: 'edit', id: t.id, values: { photos: [], rapportPrestataire: '', dateRapport: '', ...t } })
   }
   function save(e) {
     e.preventDefault()
@@ -47,6 +51,24 @@ export default function Travaux() {
   }
   function remove(t) {
     if (confirm(`Supprimer le travail "${t.titre}" ?`)) travaux.remove(t.id)
+  }
+
+  function ajouterPhotos(e) {
+    const files = [...(e.target.files || [])]
+    files.forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setModal((m) => ({
+          ...m,
+          values: { ...m.values, photos: [...(m.values.photos || []), { id: makeId(), dataUrl: reader.result, moment: momentPhoto, nom: file.name }] },
+        }))
+      }
+      reader.readAsDataURL(file)
+    })
+    e.target.value = ''
+  }
+  function retirerPhoto(photoId) {
+    setModal((m) => ({ ...m, values: { ...m.values, photos: m.values.photos.filter((p) => p.id !== photoId) } }))
   }
 
   const biensDeImmeuble = state.biens.filter((b) => b.immeubleId === modal?.values.immeubleId)
@@ -90,6 +112,26 @@ export default function Travaux() {
     setNotif({ immeuble, texte })
   }
 
+  function contacterPrestataire(t) {
+    const prestataire = state.prestataires.find((p) => p.id === t.prestataireId)
+    if (!prestataire) return
+    const immeuble = state.immeubles.find((i) => i.id === t.immeubleId)
+    const bien = state.biens.find((b) => b.id === t.bienId)
+    const texte = [
+      `Bonjour ${prestataire.nom},`,
+      '',
+      `Une intervention est à prévoir : ${t.titre}${t.categorie ? ` (${t.categorie})` : ''}.`,
+      immeuble ? `Lieu : ${immeuble.nom}${bien ? ` — ${bien.nom}` : ''}${immeuble.adresse ? `, ${immeuble.adresse}` : ''}` : '',
+      t.urgence === 'urgente' ? 'Cette intervention est urgente, merci de nous indiquer votre disponibilité rapidement.' : '',
+      t.description ? `Description du problème : ${t.description}` : '',
+      '',
+      "Merci de nous transmettre un compte-rendu (avec photos avant/après si possible) une fois l'intervention réalisée.",
+      '',
+      'Cordialement,',
+    ].filter(Boolean).join('\n')
+    setContact({ travail: t, prestataire, texte })
+  }
+
   return (
     <div>
       <PageHeader
@@ -131,7 +173,25 @@ export default function Travaux() {
                   {t.date && <p>Date : {formatDate(t.date)}</p>}
                   <p className="font-medium text-slate-800">{formatMontant(t.cout)}</p>
                 </div>
+
+                {(t.photos?.length > 0 || t.rapportPrestataire) && (
+                  <div className="mt-3 border-t border-slate-100 pt-2">
+                    {t.photos?.length > 0 && (
+                      <div className="flex gap-1.5 overflow-x-auto">
+                        {t.photos.map((p) => (
+                          <div key={p.id} className="relative shrink-0">
+                            <img src={p.dataUrl} alt="" className="h-14 w-14 rounded object-cover" />
+                            <span className="absolute bottom-0.5 left-0.5 rounded bg-black/60 px-1 text-[9px] text-white">{p.moment === 'avant' ? 'Avant' : 'Après'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {t.rapportPrestataire && <p className="mt-2 text-xs text-slate-500">📝 {t.rapportPrestataire}</p>}
+                  </div>
+                )}
+
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {prestataire && <Button variant="accent" onClick={() => contacterPrestataire(t)}>Contacter le prestataire</Button>}
                   <Button variant="secondary" onClick={() => notifierProprietaire(t)}>Notifier propriétaire</Button>
                   <Button variant="ghost" onClick={() => openEdit(t)}>Modifier</Button>
                   <Button variant="danger" onClick={() => remove(t)}>Supprimer</Button>
@@ -190,7 +250,7 @@ export default function Travaux() {
             <Field label="Prestataire">
               <Select value={modal.values.prestataireId} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, prestataireId: e.target.value } }))}>
                 <option value="">— Aucun —</option>
-                {state.prestataires.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                {state.prestataires.map((p) => <option key={p.id} value={p.id}>{p.nom}{p.metier ? ` — ${p.metier}` : ''}</option>)}
               </Select>
             </Field>
             <div className="grid grid-cols-2 gap-4">
@@ -206,6 +266,37 @@ export default function Travaux() {
                 {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </Select>
             </Field>
+
+            <Field label="Photos">
+              <div className="flex items-center gap-2">
+                <Select value={momentPhoto} onChange={(e) => setMomentPhoto(e.target.value)} className="max-w-[8rem]">
+                  <option value="avant">Avant</option>
+                  <option value="apres">Après</option>
+                </Select>
+                <Button type="button" variant="secondary" onClick={() => photoInput.current?.click()}>+ Ajouter une photo</Button>
+                <input ref={photoInput} type="file" accept="image/*" multiple className="hidden" onChange={ajouterPhotos} />
+              </div>
+              {modal.values.photos?.length > 0 && (
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                  {modal.values.photos.map((p) => (
+                    <div key={p.id} className="relative">
+                      <img src={p.dataUrl} alt="" className="h-16 w-full rounded object-cover" />
+                      <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[9px] text-white">{p.moment === 'avant' ? 'Avant' : 'Après'}</span>
+                      <button type="button" onClick={() => retirerPhoto(p.id)} className="absolute right-1 top-1 rounded bg-black/60 px-1 text-[10px] text-white">✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Field>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Rapport du prestataire (retour)">
+                <Textarea placeholder="À recopier depuis le WhatsApp / e-mail reçu du prestataire" value={modal.values.rapportPrestataire} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, rapportPrestataire: e.target.value } }))} />
+              </Field>
+              <Field label="Date du rapport">
+                <Input type="date" value={modal.values.dateRapport} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, dateRapport: e.target.value } }))} />
+              </Field>
+            </div>
           </form>
         )}
       </Modal>
@@ -223,6 +314,45 @@ export default function Travaux() {
               {notif.immeuble.proprietaireEmail
                 ? `Enregistré dans la messagerie propriétaire (${notif.immeuble.proprietaireEmail}).`
                 : "Enregistré dans la messagerie propriétaire. Pensez à renseigner l'e-mail du propriétaire depuis la page Immeubles."}
+            </p>
+          </>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!contact}
+        onClose={() => setContact(null)}
+        title={contact ? `Contacter ${contact.prestataire.nom}` : ''}
+        footer={<Button onClick={() => setContact(null)}>Fermer</Button>}
+      >
+        {contact && (
+          <>
+            <pre className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{contact.texte}</pre>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {contact.prestataire.telephone && (
+                <a
+                  href={lienWhatsapp(contact.prestataire.telephone, contact.texte)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-accent px-4 py-2 text-sm font-medium text-white shadow-soft transition-all duration-150 hover:shadow-glow-accent hover:brightness-110 active:scale-[0.98]"
+                >
+                  Envoyer par WhatsApp
+                </a>
+              )}
+              {contact.prestataire.email && (
+                <a
+                  href={lienEmail(contact.prestataire.email, `Intervention — ${contact.travail.titre}`, contact.texte)}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all duration-150 hover:border-brand-200 hover:bg-brand-50/60 hover:text-brand-700 active:scale-[0.98]"
+                >
+                  Envoyer par e-mail
+                </a>
+              )}
+              {!contact.prestataire.telephone && !contact.prestataire.email && (
+                <p className="text-sm text-warning-600">Aucun téléphone ni e-mail renseigné pour ce prestataire — ajoutez-en un depuis la page Prestataires.</p>
+              )}
+            </div>
+            <p className="mt-3 text-xs text-slate-400">
+              Ces liens ouvrent WhatsApp ou votre messagerie avec le message déjà rédigé — il ne reste qu'à cliquer sur envoyer (et à joindre vos photos manuellement, ces liens ne les attachent pas automatiquement). Quand le prestataire vous répond, recopiez son compte-rendu et ses photos dans la fiche du travail via "Modifier".
             </p>
           </>
         )}

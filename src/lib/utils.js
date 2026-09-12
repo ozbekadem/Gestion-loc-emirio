@@ -54,3 +54,17 @@ export const STATUTS_REVERSEMENT = {
   a_reverser: { label: 'À reverser', tone: 'amber' },
   reverse: { label: 'Reversé', tone: 'green' },
 }
+
+// wa.me exige un numéro international sans le 0 initial. Les prestataires de
+// la demo étant belges, on suppose le +32 par défaut faute d'indicatif saisi.
+export function lienWhatsapp(telephone, message) {
+  let chiffres = String(telephone || '').replace(/[^\d+]/g, '')
+  if (chiffres.startsWith('+')) chiffres = chiffres.slice(1)
+  else if (chiffres.startsWith('00')) chiffres = chiffres.slice(2)
+  else if (chiffres.startsWith('0')) chiffres = `32${chiffres.slice(1)}`
+  return `https://wa.me/${chiffres}?text=${encodeURIComponent(message)}`
+}
+
+export function lienEmail(email, sujet, corps) {
+  return `mailto:${email}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`
+}

@@ -71,6 +71,7 @@ export default function DossierLocataire({ locataireId, onBack }) {
   const bail = state.baux.find((b) => b.locataireId === locataireId && b.statut === 'actif')
   const docsLocataire = state.documents.filter((d) => d.locataireId === locataireId)
   const edlBail = bail ? state.etatsDesLieux.filter((e) => e.bailId === bail.id) : []
+  const travauxBien = bien ? state.travaux.filter((t) => t.bienId === bien.id) : []
   const messagesLocataire = [...state.messages].filter((m) => m.locataireId === locataireId).sort((a, b) => new Date(b.date) - new Date(a.date))
 
   const paiementMoisCourant = useMemo(() => {
@@ -296,6 +297,41 @@ export default function DossierLocataire({ locataireId, onBack }) {
                 <Button variant="danger" className="mt-1 w-full !py-1 text-xs" onClick={() => supprimerDocument(doc)}>Supprimer</Button>
               </div>
             ))}
+          </div>
+        )}
+      </Card>
+
+      <Card className="mt-6">
+        <h2 className="mb-3 text-sm font-semibold text-slate-700">Travaux / Interventions</h2>
+        {travauxBien.length === 0 ? (
+          <p className="text-sm text-slate-500">Aucune intervention enregistrée pour ce logement.</p>
+        ) : (
+          <div className="space-y-3">
+            {travauxBien.map((t) => {
+              const prestataire = state.prestataires.find((p) => p.id === t.prestataireId)
+              return (
+                <div key={t.id} className="rounded-lg border border-slate-200 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-slate-800">{t.titre}</p>
+                    <Badge tone={t.statut === 'termine' ? 'green' : t.statut === 'en_cours' ? 'amber' : 'slate'}>
+                      {t.statut === 'termine' ? 'Terminé' : t.statut === 'en_cours' ? 'En cours' : 'À planifier'}
+                    </Badge>
+                  </div>
+                  {prestataire && <p className="text-xs text-slate-400">Prestataire : {prestataire.nom}</p>}
+                  {t.description && <p className="mt-1 text-sm text-slate-500">{t.description}</p>}
+                  {t.photos?.length > 0 && (
+                    <div className="mt-2 flex gap-1.5 overflow-x-auto">
+                      {t.photos.map((p) => (
+                        <button key={p.id} type="button" onClick={() => setApercuDocument({ nom: `${t.titre} (${p.moment === 'avant' ? 'avant' : 'après'})`, mime: 'image/*', dataUrl: p.dataUrl })} className="shrink-0">
+                          <img src={p.dataUrl} alt="" className="h-14 w-14 rounded object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {t.rapportPrestataire && <p className="mt-2 text-sm text-slate-600">📝 {t.rapportPrestataire}</p>}
+                </div>
+              )
+            })}
           </div>
         )}
       </Card>
