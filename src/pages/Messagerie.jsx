@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, PageHeader, Button, Field, Input, Select, Textarea, Badge, EmptyState } from '../components/ui.jsx'
 import { formatDate } from '../lib/utils.js'
+import { useConfirm } from '../lib/confirm.jsx'
 
 const CANAUX = [
   { value: 'email', label: 'E-mail' },
@@ -15,6 +16,7 @@ const emptyMessage = { canal: 'email', sujet: '', contenu: '', sens: 'envoye' }
 
 export default function Messagerie() {
   const { state, messages } = useStore()
+  const confirm = useConfirm()
   const [mode, setMode] = useState('locataires')
   const [locataireId, setLocataireId] = useState(state.locataires[0]?.id || '')
   const [immeubleId, setImmeubleId] = useState(state.immeubles[0]?.id || '')
@@ -35,7 +37,7 @@ export default function Messagerie() {
     const filtre = mode === 'locataires'
       ? (m) => m.destinataire !== 'proprietaire' && m.locataireId === locataireId
       : (m) => m.destinataire === 'proprietaire' && m.immeubleId === immeubleId
-    return [...state.messages].filter(filtre).sort((a, b) => new Date(b.date) - new Date(a.date))
+    return state.messages.filter(filtre).sort((a, b) => new Date(b.date) - new Date(a.date))
   }, [state.messages, mode, locataireId, immeubleId])
 
   function envoyer(e) {
@@ -49,8 +51,8 @@ export default function Messagerie() {
     setBrouillon(emptyMessage)
   }
 
-  function supprimer(m) {
-    if (confirm("Supprimer ce message de l'historique ?")) messages.remove(m.id)
+  async function supprimer(m) {
+    if (await confirm("Supprimer ce message de l'historique ?", { danger: true })) messages.remove(m.id)
   }
 
   if (state.locataires.length === 0 && state.immeubles.length === 0) {

@@ -1,9 +1,11 @@
 import React, { useRef, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, PageHeader, Button, EmptyState } from '../components/ui.jsx'
+import { useConfirm } from '../lib/confirm.jsx'
 
 export default function Parametres() {
   const { state, resetDemo, importState } = useStore()
+  const confirm = useConfirm()
   const fileInput = useRef(null)
   const [message, setMessage] = useState(null)
 
@@ -22,10 +24,10 @@ export default function Parametres() {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const data = JSON.parse(reader.result)
-        if (!confirm('Importer cette sauvegarde va remplacer toutes les données actuelles. Continuer ?')) return
+        if (!(await confirm('Importer cette sauvegarde va remplacer toutes les données actuelles. Continuer ?', { danger: true }))) return
         importState(data)
         setMessage({ tone: 'ok', texte: 'Sauvegarde importée avec succès.' })
       } catch {
@@ -36,8 +38,8 @@ export default function Parametres() {
     e.target.value = ''
   }
 
-  function reinitialiser() {
-    if (confirm('Réinitialiser toutes les données avec le jeu de démonstration ? Cette action est irréversible.')) {
+  async function reinitialiser() {
+    if (await confirm('Réinitialiser toutes les données avec le jeu de démonstration ? Cette action est irréversible.', { danger: true })) {
       resetDemo()
       setMessage({ tone: 'ok', texte: 'Données réinitialisées.' })
     }

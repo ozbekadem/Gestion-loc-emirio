@@ -3,6 +3,7 @@ import { useStore } from '../lib/store.jsx'
 import { Card, Button, Badge, Modal, Field, Input, Select, Textarea, EmptyState } from '../components/ui.jsx'
 import { formatDate, formatMontant, labelMois, moisCourant, statutPaiementInfo, statutLocataireInfo, texteRappelLoyer } from '../lib/utils.js'
 import { itemsAdminBail } from '../lib/taches.js'
+import { useConfirm } from '../lib/confirm.jsx'
 
 const TYPES_DOCUMENT = [
   { value: 'carte_identite', label: "Pièce d'identité" },
@@ -37,6 +38,7 @@ function toneEtat(etat) {
 
 export default function DossierLocataire({ locataireId, onBack }) {
   const { state, locataires, documents, etatsDesLieux, messages, baux } = useStore()
+  const confirm = useConfirm()
   const fileInput = useRef(null)
   const [typeUpload, setTypeUpload] = useState('carte_identite')
   const [modalEdl, setModalEdl] = useState(null)
@@ -95,8 +97,8 @@ export default function DossierLocataire({ locataireId, onBack }) {
     e.target.value = ''
   }
 
-  function supprimerDocument(doc) {
-    if (confirm(`Supprimer le document "${doc.nom}" ?`)) documents.remove(doc.id)
+  async function supprimerDocument(doc) {
+    if (await confirm(`Supprimer le document "${doc.nom}" ?`, { danger: true })) documents.remove(doc.id)
   }
 
   function ouvrirNouvelEdl(type) {
@@ -114,8 +116,8 @@ export default function DossierLocataire({ locataireId, onBack }) {
     else etatsDesLieux.update(id, payload)
     setModalEdl(null)
   }
-  function supprimerEdl(edl) {
-    if (confirm("Supprimer cet état des lieux ?")) etatsDesLieux.remove(edl.id)
+  async function supprimerEdl(edl) {
+    if (await confirm("Supprimer cet état des lieux ?", { danger: true })) etatsDesLieux.remove(edl.id)
   }
 
   function marquerFaitAujourdhui(cle) {

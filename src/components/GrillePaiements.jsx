@@ -36,9 +36,20 @@ export default function GrillePaiements() {
       .filter((l) => !filtreImmeuble || l.immeuble?.id === filtreImmeuble)
   }, [bauxActifs, state.locataires, state.biens, state.immeubles, filtreImmeuble])
 
+  // La grille affiche jusqu'à 12 cellules par bail actif ; avec un portefeuille
+  // conséquent (des dizaines de locataires, plusieurs années d'historique), un
+  // .find() dans state.paiements pour chaque cellule redevient coûteux à
+  // chaque rendu. On indexe une fois par bailId+mois plutôt que de refaire un
+  // parcours linéaire par cellule.
+  const paiementsParCle = useMemo(() => {
+    const map = new Map()
+    state.paiements.forEach((p) => map.set(`${p.bailId}|${p.mois}`, p))
+    return map
+  }, [state.paiements])
+
   function paiementDe(bailId, moisIndex) {
     const mois = `${annee}-${String(moisIndex + 1).padStart(2, '0')}`
-    return state.paiements.find((p) => p.bailId === bailId && p.mois === mois)
+    return paiementsParCle.get(`${bailId}|${mois}`)
   }
 
   function ouvrirCellule(ligne, moisIndex) {

@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
+import { useCrudModal } from '../lib/useCrudModal.js'
+import { useConfirm } from '../lib/confirm.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, Textarea, EmptyState, Badge } from '../components/ui.jsx'
 import { formatDate, moisCourant, statutPaiementInfo, STATUTS_LOCATAIRE, statutLocataireInfo } from '../lib/utils.js'
 import DossierLocataire from './DossierLocataire.jsx'
@@ -15,7 +17,8 @@ const emptyLocataire = { nom: '', prenom: '', email: '', telephone: '', bienId: 
 
 export default function Locataires() {
   const { state, locataires } = useStore()
-  const [modal, setModal] = useState(null)
+  const confirm = useConfirm()
+  const locataireModal = useCrudModal(locataires, emptyLocataire)
   const [search, setSearch] = useState('')
   const [filtreImmeuble, setFiltreImmeuble] = useState('')
   const [filtrePaiement, setFiltrePaiement] = useState('')
@@ -46,24 +49,12 @@ export default function Locataires() {
     return <DossierLocataire locataireId={dossierId} onBack={() => setDossierId(null)} />
   }
 
-  function openNew() {
-    setModal({ mode: 'create', values: emptyLocataire })
-  }
-  function openEdit(l) {
-    setModal({ mode: 'edit', id: l.id, values: { ...l } })
-  }
-  function save(e) {
-    e.preventDefault()
-    const { mode, id, values } = modal
-    if (mode === 'create') locataires.add(values)
-    else locataires.update(id, values)
-    setModal(null)
-  }
-  function remove(l) {
+  async function remove(l) {
     const aUnBail = state.baux.some((b) => b.locataireId === l.id)
-    if (aUnBail && !confirm(`${l.prenom} ${l.nom} a un ou plusieurs baux associés. Supprimer quand même ?`)) return
-    if (!aUnBail && !confirm(`Supprimer ${l.prenom} ${l.nom} ?`)) return
-    locataires.remove(l.id)
+    const message = aUnBail
+      ? `${l.prenom} ${l.nom} a un ou plusieurs baux associés. Supprimer quand même ?`
+      : `Supprimer ${l.prenom} ${l.nom} ?`
+    if (await confirm(message, { danger: true })) locataires.remove(l.id)
   }
 
   return (
@@ -71,7 +62,7 @@ export default function Locataires() {
       <PageHeader
         title="Locataires"
         subtitle="Carnet des locataires actuels et anciens"
-        action={<Button onClick={openNew}>+ Ajouter locataire</Button>}
+        action={<Button onClick={() => locataireModal.openNew()}>+ Ajouter locataire</Button>}
       />
 
       {state.locataires.length > 0 && (
@@ -98,7 +89,7 @@ export default function Locataires() {
         <EmptyState
           title="Aucun locataire pour le moment"
           subtitle="Ajoutez votre premier locataire pour démarrer le suivi."
-          action={<Button className="mt-2" onClick={openNew}>Ajouter mon premier locataire</Button>}
+          action={<Button className="mt-2" onClick={() => locataireModal.openNew()}>Ajouter mon premier locataire</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -129,7 +120,7 @@ export default function Locataires() {
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button variant="secondary" onClick={() => setDossierId(l.id)}>Voir le dossier</Button>
-                  <Button variant="ghost" onClick={() => openEdit(l)}>Modifier</Button>
+                  <Button variant="ghost" onClick={() => locataireModal.openEdit(l)}>Modifier</Button>
                   <Button variant="danger" onClick={() => remove(l)}>Supprimer</Button>
                 </div>
               </Card>
@@ -139,34 +130,34 @@ export default function Locataires() {
       )}
 
       <Modal
-        open={!!modal}
-        onClose={() => setModal(null)}
-        title={modal?.mode === 'edit' ? 'Modifier le locataire' : 'Ajouter un locataire'}
+        open={!!locataireModal.modal}
+        onClose={locataireModal.close}
+        title={locataireModal.modal?.mode === 'edit' ? 'Modifier le locataire' : 'Ajouter un locataire'}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModal(null)}>Annuler</Button>
+            <Button variant="secondary" onClick={locataireModal.close}>Annuler</Button>
             <Button type="submit" form="form-locataire">Enregistrer</Button>
           </>
         }
       >
-        {modal && (
-          <form id="form-locataire" onSubmit={save} className="space-y-4">
+        {locataireModal.modal && (
+          <form id="form-locataire" onSubmit={locataireModal.save} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <Field label="Prénom">
-                <Input required value={modal.values.prenom} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, prenom: e.target.value } }))} />
+                <Input required value={locataireModal.modal.values.prenom} onChange={locataireModal.field('prenom')} />
               </Field>
               <Field label="Nom">
-                <Input required value={modal.values.nom} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, nom: e.target.value } }))} />
+                <Input required value={locataireModal.modal.values.nom} onChange={locataireModal.field('nom')} />
               </Field>
             </div>
             <Field label="Adresse e-mail">
-              <Input type="email" value={modal.values.email} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, email: e.target.value } }))} />
+              <Input type="email" value={locataireModal.modal.values.email} onChange={locataireModal.field('email')} />
             </Field>
             <Field label="Téléphone">
-              <Input value={modal.values.telephone} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, telephone: e.target.value } }))} />
+              <Input value={locataireModal.modal.values.telephone} onChange={locataireModal.field('telephone')} />
             </Field>
             <Field label="Bien occupé">
-              <Select value={modal.values.bienId} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, bienId: e.target.value } }))}>
+              <Select value={locataireModal.modal.values.bienId} onChange={locataireModal.field('bienId')}>
                 <option value="">— Aucun —</option>
                 {state.biens.map((b) => {
                   const immeuble = state.immeubles.find((i) => i.id === b.immeubleId)
@@ -176,10 +167,10 @@ export default function Locataires() {
             </Field>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Date d'entrée">
-                <Input type="date" value={modal.values.dateEntree} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, dateEntree: e.target.value } }))} />
+                <Input type="date" value={locataireModal.modal.values.dateEntree} onChange={locataireModal.field('dateEntree')} />
               </Field>
               <Field label="Statut">
-                <Select value={modal.values.statut} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, statut: e.target.value } }))}>
+                <Select value={locataireModal.modal.values.statut} onChange={locataireModal.field('statut')}>
                   {STATUTS_LOCATAIRE.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </Select>
               </Field>
@@ -187,8 +178,8 @@ export default function Locataires() {
             <Field label="Notes internes">
               <Textarea
                 placeholder="Ex. : accord de paiement en 2 fois, difficulté financière temporaire..."
-                value={modal.values.notes || ''}
-                onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, notes: e.target.value } }))}
+                value={locataireModal.modal.values.notes || ''}
+                onChange={locataireModal.field('notes')}
               />
             </Field>
           </form>

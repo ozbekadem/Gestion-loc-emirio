@@ -1,7 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, it, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { StoreProvider } from '../lib/store.jsx'
+import { renderWithProviders } from '../test/renderWithProviders.jsx'
 import Baux from './Baux.jsx'
 
 const STORAGE_KEY = 'emirio-gestion-loc-data'
@@ -50,19 +50,18 @@ describe('Baux — suppression d\'un bail (pas d\'enregistrements orphelins)', (
   })
 
   it('supprime le bail ainsi que ses paiements et états des lieux associés', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const user = userEvent.setup()
-    render(
-      <StoreProvider>
-        <Baux />
-      </StoreProvider>,
-    )
+    renderWithProviders(<Baux />)
 
     expect(screen.getByText('Julie Dupuis')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Suppr.' }))
 
-    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('2 paiements'))
+    // La boîte de dialogue de confirmation (in-app, plus de window.confirm) affiche
+    // le nombre de paiements qui seront supprimés avec le bail.
+    expect(await screen.findByText(/2 paiements/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Confirmer' }))
+
     expect(screen.queryByText('Julie Dupuis')).not.toBeInTheDocument()
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
@@ -83,15 +82,11 @@ describe('Baux — suppression d\'un bail (pas d\'enregistrements orphelins)', (
     state.paiements.push({ id: 'p3', bailId: 'bail2', mois: '2022-01', montantAttendu: 540, montantPaye: 540, statut: 'paye', fraisGestion: 40 })
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
 
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const user = userEvent.setup()
-    render(
-      <StoreProvider>
-        <Baux />
-      </StoreProvider>,
-    )
+    renderWithProviders(<Baux />)
 
     await user.click(screen.getAllByRole('button', { name: 'Suppr.' })[0])
+    await user.click(await screen.findByRole('button', { name: 'Confirmer' }))
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
     expect(stored.baux).toHaveLength(1)
@@ -101,15 +96,11 @@ describe('Baux — suppression d\'un bail (pas d\'enregistrements orphelins)', (
   })
 
   it('ne supprime rien si la confirmation est annulée', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
     const user = userEvent.setup()
-    render(
-      <StoreProvider>
-        <Baux />
-      </StoreProvider>,
-    )
+    renderWithProviders(<Baux />)
 
     await user.click(screen.getByRole('button', { name: 'Suppr.' }))
+    await user.click(await screen.findByRole('button', { name: 'Annuler' }))
 
     expect(screen.getByText('Julie Dupuis')).toBeInTheDocument()
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))

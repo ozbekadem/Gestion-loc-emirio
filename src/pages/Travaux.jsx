@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
+import { useCrudModal } from '../lib/useCrudModal.js'
+import { useConfirm } from '../lib/confirm.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, Textarea, Badge, EmptyState } from '../components/ui.jsx'
 import { formatDate, formatMontant, lienWhatsapp, lienEmail } from '../lib/utils.js'
 import { makeId } from '../lib/id.js'
@@ -26,31 +28,22 @@ const emptyTravail = {
   categorie: CATEGORIES[0], urgence: 'normale', photos: [], rapportPrestataire: '', dateRapport: '',
 }
 
+function coercerTravail(values) {
+  return { ...values, cout: Number(values.cout) || 0 }
+}
+
 export default function Travaux() {
   const { state, travaux, messages } = useStore()
-  const [modal, setModal] = useState(null)
+  const confirm = useConfirm()
+  const travailModal = useCrudModal(travaux, emptyTravail, coercerTravail)
   const [filtreImmeuble, setFiltreImmeuble] = useState('')
   const [notif, setNotif] = useState(null)
   const [contact, setContact] = useState(null)
   const [momentPhoto, setMomentPhoto] = useState('avant')
   const photoInput = useRef(null)
 
-  function openNew() {
-    setModal({ mode: 'create', values: emptyTravail })
-  }
-  function openEdit(t) {
-    setModal({ mode: 'edit', id: t.id, values: { photos: [], rapportPrestataire: '', dateRapport: '', ...t } })
-  }
-  function save(e) {
-    e.preventDefault()
-    const { mode, id, values } = modal
-    const payload = { ...values, cout: Number(values.cout) || 0 }
-    if (mode === 'create') travaux.add(payload)
-    else travaux.update(id, payload)
-    setModal(null)
-  }
-  function remove(t) {
-    if (confirm(`Supprimer le travail "${t.titre}" ?`)) travaux.remove(t.id)
+  async function remove(t) {
+    if (await confirm(`Supprimer le travail "${t.titre}" ?`, { danger: true })) travaux.remove(t.id)
   }
 
   function ajouterPhotos(e) {
@@ -58,20 +51,17 @@ export default function Travaux() {
     files.forEach((file) => {
       const reader = new FileReader()
       reader.onload = () => {
-        setModal((m) => ({
-          ...m,
-          values: { ...m.values, photos: [...(m.values.photos || []), { id: makeId(), dataUrl: reader.result, moment: momentPhoto, nom: file.name }] },
-        }))
+        travailModal.setValues((v) => ({ photos: [...(v.photos || []), { id: makeId(), dataUrl: reader.result, moment: momentPhoto, nom: file.name }] }))
       }
       reader.readAsDataURL(file)
     })
     e.target.value = ''
   }
   function retirerPhoto(photoId) {
-    setModal((m) => ({ ...m, values: { ...m.values, photos: m.values.photos.filter((p) => p.id !== photoId) } }))
+    travailModal.setValues((v) => ({ photos: v.photos.filter((p) => p.id !== photoId) }))
   }
 
-  const biensDeImmeuble = state.biens.filter((b) => b.immeubleId === modal?.values.immeubleId)
+  const biensDeImmeuble = state.biens.filter((b) => b.immeubleId === travailModal.modal?.values.immeubleId)
   const liste = state.travaux
     .filter((t) => !filtreImmeuble || t.immeubleId === filtreImmeuble)
     .sort((a, b) => {
@@ -137,7 +127,7 @@ export default function Travaux() {
       <PageHeader
         title="Travaux"
         subtitle="Suivi des interventions et de leur coût"
-        action={<Button onClick={openNew}>+ Ajouter un travail</Button>}
+        action={<Button onClick={() => travailModal.openNew()}>+ Ajouter un travail</Button>}
       />
 
       {state.immeubles.length > 0 && (
@@ -148,7 +138,7 @@ export default function Travaux() {
       )}
 
       {liste.length === 0 ? (
-        <EmptyState title="Aucun travail pour cet immeuble" subtitle="Ajoutez une intervention à planifier ou en cours." action={<Button className="mt-2" onClick={openNew}>Ajouter un travail</Button>} />
+        <EmptyState title="Aucun travail pour cet immeuble" subtitle="Ajoutez une intervention à planifier ou en cours." action={<Button className="mt-2" onClick={() => travailModal.openNew()}>Ajouter un travail</Button>} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {liste.map((t) => {
@@ -193,7 +183,7 @@ export default function Travaux() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   {prestataire && <Button variant="accent" onClick={() => contacterPrestataire(t)}>Contacter le prestataire</Button>}
                   <Button variant="secondary" onClick={() => notifierProprietaire(t)}>Notifier propriétaire</Button>
-                  <Button variant="ghost" onClick={() => openEdit(t)}>Modifier</Button>
+                  <Button variant="ghost" onClick={() => travailModal.openEdit(t)}>Modifier</Button>
                   <Button variant="danger" onClick={() => remove(t)}>Supprimer</Button>
                 </div>
               </Card>
@@ -203,66 +193,66 @@ export default function Travaux() {
       )}
 
       <Modal
-        open={!!modal}
-        onClose={() => setModal(null)}
-        title={modal?.mode === 'edit' ? 'Modifier le travail' : 'Ajouter un travail'}
+        open={!!travailModal.modal}
+        onClose={travailModal.close}
+        title={travailModal.modal?.mode === 'edit' ? 'Modifier le travail' : 'Ajouter un travail'}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModal(null)}>Annuler</Button>
+            <Button variant="secondary" onClick={travailModal.close}>Annuler</Button>
             <Button type="submit" form="form-travail">Enregistrer</Button>
           </>
         }
       >
-        {modal && (
-          <form id="form-travail" onSubmit={save} className="space-y-4">
+        {travailModal.modal && (
+          <form id="form-travail" onSubmit={travailModal.save} className="space-y-4">
             <Field label="Titre">
-              <Input required value={modal.values.titre} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, titre: e.target.value } }))} />
+              <Input required value={travailModal.modal.values.titre} onChange={travailModal.field('titre')} />
             </Field>
             <Field label="Description">
-              <Textarea value={modal.values.description} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, description: e.target.value } }))} />
+              <Textarea value={travailModal.modal.values.description} onChange={travailModal.field('description')} />
             </Field>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Catégorie">
-                <Select value={modal.values.categorie} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, categorie: e.target.value } }))}>
+                <Select value={travailModal.modal.values.categorie} onChange={travailModal.field('categorie')}>
                   {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </Select>
               </Field>
               <Field label="Urgence">
-                <Select value={modal.values.urgence} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, urgence: e.target.value } }))}>
+                <Select value={travailModal.modal.values.urgence} onChange={travailModal.field('urgence')}>
                   {URGENCES.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
                 </Select>
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Immeuble">
-                <Select value={modal.values.immeubleId} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, immeubleId: e.target.value, bienId: '' } }))}>
+                <Select value={travailModal.modal.values.immeubleId} onChange={(e) => travailModal.setValues({ immeubleId: e.target.value, bienId: '' })}>
                   <option value="">— Aucun —</option>
                   {state.immeubles.map((im) => <option key={im.id} value={im.id}>{im.nom}</option>)}
                 </Select>
               </Field>
               <Field label="Bien concerné">
-                <Select value={modal.values.bienId} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, bienId: e.target.value } }))}>
+                <Select value={travailModal.modal.values.bienId} onChange={travailModal.field('bienId')}>
                   <option value="">— Aucun —</option>
                   {biensDeImmeuble.map((b) => <option key={b.id} value={b.id}>{b.nom}</option>)}
                 </Select>
               </Field>
             </div>
             <Field label="Prestataire">
-              <Select value={modal.values.prestataireId} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, prestataireId: e.target.value } }))}>
+              <Select value={travailModal.modal.values.prestataireId} onChange={travailModal.field('prestataireId')}>
                 <option value="">— Aucun —</option>
                 {state.prestataires.map((p) => <option key={p.id} value={p.id}>{p.nom}{p.metier ? ` — ${p.metier}` : ''}</option>)}
               </Select>
             </Field>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Coût (€)">
-                <Input type="number" min="0" value={modal.values.cout} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, cout: e.target.value } }))} />
+                <Input type="number" min="0" value={travailModal.modal.values.cout} onChange={travailModal.field('cout')} />
               </Field>
               <Field label="Date">
-                <Input type="date" value={modal.values.date} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, date: e.target.value } }))} />
+                <Input type="date" value={travailModal.modal.values.date} onChange={travailModal.field('date')} />
               </Field>
             </div>
             <Field label="Statut">
-              <Select value={modal.values.statut} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, statut: e.target.value } }))}>
+              <Select value={travailModal.modal.values.statut} onChange={travailModal.field('statut')}>
                 {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </Select>
             </Field>
@@ -276,9 +266,9 @@ export default function Travaux() {
                 <Button type="button" variant="secondary" onClick={() => photoInput.current?.click()}>+ Ajouter une photo</Button>
                 <input ref={photoInput} type="file" accept="image/*" multiple className="hidden" onChange={ajouterPhotos} />
               </div>
-              {modal.values.photos?.length > 0 && (
+              {travailModal.modal.values.photos?.length > 0 && (
                 <div className="mt-2 grid grid-cols-4 gap-2">
-                  {modal.values.photos.map((p) => (
+                  {travailModal.modal.values.photos.map((p) => (
                     <div key={p.id} className="relative">
                       <img src={p.dataUrl} alt="" className="h-16 w-full rounded object-cover" />
                       <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[9px] text-white">{p.moment === 'avant' ? 'Avant' : 'Après'}</span>
@@ -291,10 +281,10 @@ export default function Travaux() {
 
             <div className="grid grid-cols-2 gap-4">
               <Field label="Rapport du prestataire (retour)">
-                <Textarea placeholder="À recopier depuis le WhatsApp / e-mail reçu du prestataire" value={modal.values.rapportPrestataire} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, rapportPrestataire: e.target.value } }))} />
+                <Textarea placeholder="À recopier depuis le WhatsApp / e-mail reçu du prestataire" value={travailModal.modal.values.rapportPrestataire} onChange={travailModal.field('rapportPrestataire')} />
               </Field>
               <Field label="Date du rapport">
-                <Input type="date" value={modal.values.dateRapport} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, dateRapport: e.target.value } }))} />
+                <Input type="date" value={travailModal.modal.values.dateRapport} onChange={travailModal.field('dateRapport')} />
               </Field>
             </div>
           </form>

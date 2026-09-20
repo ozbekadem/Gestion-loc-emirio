@@ -56,12 +56,14 @@ outils de développement du navigateur.
 
 ```
 src/
-  main.jsx              Point d'entrée React (monte <App/> dans un <StoreProvider>)
+  main.jsx              Point d'entrée React (monte <App/> dans <StoreProvider> + <ConfirmProvider>)
   App.jsx                Shell applicatif : barre latérale, navigation, badges de comptage
   index.css              Directives Tailwind
   lib/
     store.jsx             State management (reducer + Context) et persistance localStorage
     nav.jsx                Contexte de navigation (pour naviguer depuis une page enfant)
+    confirm.jsx             Boîte de dialogue de confirmation stylée (useConfirm), remplace window.confirm/alert
+    useCrudModal.js         Hook partagé pour les modales de création/édition des pages CRUD
     taches.js              Moteur de "tâches automatiques" (voir Flux utilisateurs clés)
     utils.js                Formatage (montants, dates), statuts de paiement, liens WhatsApp/mailto
     id.js                   Génération d'identifiants (makeId)
@@ -99,6 +101,14 @@ docs/
 - **Pas de backend / API** : toute la persistance est côté navigateur. Voir
   `docs/ARCHITECTURE.md` pour le détail du schéma de données et des points
   d'extension (ajouter une page, une collection, brancher un vrai backend).
+- **Composants réutilisables** : les pages de gestion de collection (CRUD)
+  partagent le hook `useCrudModal` (`lib/useCrudModal.js`) pour leur modale
+  de création/édition, et `useConfirm` (`lib/confirm.jsx`) pour toutes les
+  confirmations et alertes — aucune page n'appelle plus directement
+  `window.confirm`/`window.alert`, remplacés par une boîte de dialogue
+  cohérente avec le reste de l'interface. Voir
+  [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#modales-de-formulaire-usecrudmodal-et-confirmations-useconfirm)
+  pour l'usage détaillé de ces deux primitives.
 
 Pour une explication plus complète (schéma de données par collection,
 comment ajouter une page ou une collection), voir
@@ -170,9 +180,14 @@ Couverture actuelle :
   logiques métier les plus critiques de l'app), règle par règle.
 - `src/lib/store.test.jsx` — le reducer et la persistance `localStorage`
   (ajout/mise à jour/suppression, rechargement, réinitialisation, import).
+- `src/lib/useCrudModal.test.js` et `src/lib/confirm.test.jsx` — les deux
+  primitives partagées par les pages CRUD (voir Conventions de code).
 - `src/components/GrillePaiements.test.jsx` — flux utilisateur de bout en
   bout : enregistrer un loyer perçu via la grille de paiements et vérifier
   que la cellule affichée et le state persisté sont cohérents.
+- `src/pages/Baux.test.jsx` — flux de suppression d'un bail : vérifie que la
+  cascade sur les paiements/états des lieux associés fonctionne, via la
+  vraie boîte de dialogue de confirmation (pas un mock de `window.confirm`).
 
 Ce n'est pas une couverture exhaustive de chaque page (l'UI React elle-même
 change souvent) : l'effort est concentré sur la logique métier pure (`lib/`)
@@ -184,8 +199,9 @@ Pour ajouter un test :
 1. Logique pure (`src/lib/*.js`) → fichier `*.test.js` à côté, tests directs
    sur les fonctions exportées.
 2. Composant/page → fichier `*.test.jsx` à côté, rendu avec
-   `@testing-library/react` sous un `<StoreProvider>`. Pour un état
-   déterministe, pré-remplissez `localStorage.setItem('emirio-gestion-loc-data', JSON.stringify(state))`
+   `renderWithProviders` (`src/test/renderWithProviders.jsx`) qui enveloppe
+   `<StoreProvider>` + `<ConfirmProvider>` comme le fait `main.jsx`. Pour un
+   état déterministe, pré-remplissez `localStorage.setItem('emirio-gestion-loc-data', JSON.stringify(state))`
    avant le rendu plutôt que de dépendre des données de démonstration
    générées par `seed.js` (qui contiennent des dates relatives et ne sont
    pas garanties stables).
@@ -202,6 +218,11 @@ Pour ajouter un test :
   réutiliser plutôt que dupliquer du balisage stylé.
 - Le state ne se modifie jamais directement : toujours passer par les
   actions `add` / `update` / `remove` de `useStore()`.
+- Jamais de `window.confirm()` / `window.alert()` : utiliser `useConfirm()`
+  (`lib/confirm.jsx`) pour rester visuellement cohérent avec le reste de
+  l'app. Pour une modale de création/édition d'une collection, utiliser
+  `useCrudModal` (`lib/useCrudModal.js`) plutôt que de réécrire le state de
+  modale à la main — voir `docs/ARCHITECTURE.md`.
 - Une page = un fichier sous `src/pages/`, ajoutée à `NAV_SECTIONS` dans
   `App.jsx` pour apparaître dans la navigation (voir
   `docs/ARCHITECTURE.md` pour la marche à suivre complète).

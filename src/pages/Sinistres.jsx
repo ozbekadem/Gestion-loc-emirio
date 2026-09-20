@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { useStore } from '../lib/store.jsx'
+import { useCrudModal } from '../lib/useCrudModal.js'
+import { useConfirm } from '../lib/confirm.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, Textarea, Badge, EmptyState } from '../components/ui.jsx'
 import { formatDate, formatMontant } from '../lib/utils.js'
 
@@ -15,28 +17,19 @@ const emptySinistre = {
   dateSinistre: '', description: '', statut: 'en_cours', montantEstime: '',
 }
 
+function coercerSinistre(values) {
+  return { ...values, montantEstime: Number(values.montantEstime) || 0 }
+}
+
 export default function Sinistres() {
   const { state, sinistres, messages } = useStore()
-  const [modal, setModal] = useState(null)
+  const confirm = useConfirm()
+  const modal = useCrudModal(sinistres, emptySinistre, coercerSinistre)
   const [filtreImmeuble, setFiltreImmeuble] = useState('')
   const [notif, setNotif] = useState(null)
 
-  function openNew() {
-    setModal({ mode: 'create', values: emptySinistre })
-  }
-  function openEdit(s) {
-    setModal({ mode: 'edit', id: s.id, values: { ...s } })
-  }
-  function save(e) {
-    e.preventDefault()
-    const { mode, id, values } = modal
-    const payload = { ...values, montantEstime: Number(values.montantEstime) || 0 }
-    if (mode === 'create') sinistres.add(payload)
-    else sinistres.update(id, payload)
-    setModal(null)
-  }
-  function remove(s) {
-    if (confirm(`Supprimer le dossier de sinistre "${s.type}" ?`)) sinistres.remove(s.id)
+  async function remove(s) {
+    if (await confirm(`Supprimer le dossier de sinistre "${s.type}" ?`, { danger: true })) sinistres.remove(s.id)
   }
 
   function notifierProprietaire(s) {
@@ -69,7 +62,7 @@ export default function Sinistres() {
     setNotif({ immeuble, texte })
   }
 
-  const biensDeImmeuble = state.biens.filter((b) => b.immeubleId === modal?.values.immeubleId)
+  const biensDeImmeuble = state.biens.filter((b) => b.immeubleId === modal.modal?.values.immeubleId)
   const liste = state.sinistres.filter((s) => !filtreImmeuble || s.immeubleId === filtreImmeuble)
 
   function statutInfo(v) {
@@ -81,7 +74,7 @@ export default function Sinistres() {
       <PageHeader
         title="Sinistres & assurances"
         subtitle="Dossiers de sinistre suivis par immeuble"
-        action={<Button onClick={openNew}>+ Déclarer un sinistre</Button>}
+        action={<Button onClick={() => modal.openNew()}>+ Déclarer un sinistre</Button>}
       />
 
       {state.immeubles.length > 0 && (
@@ -92,7 +85,7 @@ export default function Sinistres() {
       )}
 
       {liste.length === 0 ? (
-        <EmptyState title="Aucun dossier de sinistre" subtitle="Déclarez un sinistre pour en assurer le suivi." action={<Button className="mt-2" onClick={openNew}>Déclarer un sinistre</Button>} />
+        <EmptyState title="Aucun dossier de sinistre" subtitle="Déclarez un sinistre pour en assurer le suivi." action={<Button className="mt-2" onClick={() => modal.openNew()}>Déclarer un sinistre</Button>} />
       ) : (
         <Card>
           <div className="overflow-x-auto">
@@ -125,7 +118,7 @@ export default function Sinistres() {
                       <td className="py-2 pr-4"><Badge tone={info.tone}>{info.label}</Badge></td>
                       <td className="py-2 text-right">
                         <Button variant="secondary" onClick={() => notifierProprietaire(s)}>Notifier propriétaire</Button>
-                        <Button variant="ghost" onClick={() => openEdit(s)}>Modifier</Button>
+                        <Button variant="ghost" onClick={() => modal.openEdit(s)}>Modifier</Button>
                         <Button variant="danger" onClick={() => remove(s)}>Suppr.</Button>
                       </td>
                     </tr>
@@ -138,39 +131,39 @@ export default function Sinistres() {
       )}
 
       <Modal
-        open={!!modal}
-        onClose={() => setModal(null)}
-        title={modal?.mode === 'edit' ? 'Modifier le sinistre' : 'Déclarer un sinistre'}
+        open={!!modal.modal}
+        onClose={modal.close}
+        title={modal.modal?.mode === 'edit' ? 'Modifier le sinistre' : 'Déclarer un sinistre'}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModal(null)}>Annuler</Button>
+            <Button variant="secondary" onClick={modal.close}>Annuler</Button>
             <Button type="submit" form="form-sinistre">Enregistrer</Button>
           </>
         }
       >
-        {modal && (
-          <form id="form-sinistre" onSubmit={save} className="space-y-4">
+        {modal.modal && (
+          <form id="form-sinistre" onSubmit={modal.save} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <Field label="Type de sinistre">
-                <Select value={modal.values.type} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, type: e.target.value } }))}>
+                <Select value={modal.modal.values.type} onChange={modal.field('type')}>
                   {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </Select>
               </Field>
               <Field label="Statut">
-                <Select value={modal.values.statut} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, statut: e.target.value } }))}>
+                <Select value={modal.modal.values.statut} onChange={modal.field('statut')}>
                   {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </Select>
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Immeuble">
-                <Select value={modal.values.immeubleId} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, immeubleId: e.target.value, bienId: '' } }))}>
+                <Select value={modal.modal.values.immeubleId} onChange={(e) => modal.setValues({ immeubleId: e.target.value, bienId: '' })}>
                   <option value="">— Aucun —</option>
                   {state.immeubles.map((im) => <option key={im.id} value={im.id}>{im.nom}</option>)}
                 </Select>
               </Field>
               <Field label="Bien concerné">
-                <Select value={modal.values.bienId} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, bienId: e.target.value } }))}>
+                <Select value={modal.modal.values.bienId} onChange={modal.field('bienId')}>
                   <option value="">— Aucun —</option>
                   {biensDeImmeuble.map((b) => <option key={b.id} value={b.id}>{b.nom}</option>)}
                 </Select>
@@ -178,22 +171,22 @@ export default function Sinistres() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Compagnie d'assurance">
-                <Input value={modal.values.compagnieAssurance} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, compagnieAssurance: e.target.value } }))} />
+                <Input value={modal.modal.values.compagnieAssurance} onChange={modal.field('compagnieAssurance')} />
               </Field>
               <Field label="N° de dossier">
-                <Input value={modal.values.numeroDossier} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, numeroDossier: e.target.value } }))} />
+                <Input value={modal.modal.values.numeroDossier} onChange={modal.field('numeroDossier')} />
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Date du sinistre">
-                <Input type="date" value={modal.values.dateSinistre} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, dateSinistre: e.target.value } }))} />
+                <Input type="date" value={modal.modal.values.dateSinistre} onChange={modal.field('dateSinistre')} />
               </Field>
               <Field label="Montant estimé (€)">
-                <Input type="number" min="0" value={modal.values.montantEstime} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, montantEstime: e.target.value } }))} />
+                <Input type="number" min="0" value={modal.modal.values.montantEstime} onChange={modal.field('montantEstime')} />
               </Field>
             </div>
             <Field label="Description">
-              <Textarea value={modal.values.description} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, description: e.target.value } }))} />
+              <Textarea value={modal.modal.values.description} onChange={modal.field('description')} />
             </Field>
           </form>
         )}

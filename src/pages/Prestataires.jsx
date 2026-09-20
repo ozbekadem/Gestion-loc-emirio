@@ -1,32 +1,22 @@
 import React, { useState } from 'react'
 import { useStore } from '../lib/store.jsx'
+import { useCrudModal } from '../lib/useCrudModal.js'
+import { useConfirm } from '../lib/confirm.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, EmptyState } from '../components/ui.jsx'
 
 const emptyPrestataire = { nom: '', metier: '', telephone: '', email: '', adresse: '' }
 
 export default function Prestataires() {
   const { state, prestataires } = useStore()
-  const [modal, setModal] = useState(null)
+  const confirm = useConfirm()
+  const modal = useCrudModal(prestataires, emptyPrestataire)
   const [filtreMetier, setFiltreMetier] = useState('')
 
   const metiers = [...new Set(state.prestataires.map((p) => p.metier).filter(Boolean))].sort((a, b) => a.localeCompare(b))
   const listeFiltree = state.prestataires.filter((p) => !filtreMetier || p.metier === filtreMetier)
 
-  function openNew() {
-    setModal({ mode: 'create', values: emptyPrestataire })
-  }
-  function openEdit(p) {
-    setModal({ mode: 'edit', id: p.id, values: { ...p } })
-  }
-  function save(e) {
-    e.preventDefault()
-    const { mode, id, values } = modal
-    if (mode === 'create') prestataires.add(values)
-    else prestataires.update(id, values)
-    setModal(null)
-  }
-  function remove(p) {
-    if (confirm(`Supprimer "${p.nom}" du carnet d'adresses ?`)) prestataires.remove(p.id)
+  async function remove(p) {
+    if (await confirm(`Supprimer "${p.nom}" du carnet d'adresses ?`, { danger: true })) prestataires.remove(p.id)
   }
 
   return (
@@ -34,7 +24,7 @@ export default function Prestataires() {
       <PageHeader
         title="Prestataires"
         subtitle="Carnet d'adresses professionnel"
-        action={<Button onClick={openNew}>+ Ajouter le prestataire</Button>}
+        action={<Button onClick={() => modal.openNew()}>+ Ajouter le prestataire</Button>}
       />
 
       {metiers.length > 0 && (
@@ -45,9 +35,9 @@ export default function Prestataires() {
       )}
 
       {state.prestataires.length === 0 ? (
-        <EmptyState title="Aucun prestataire pour le moment" subtitle="Ajoutez vos artisans et professionnels de confiance." action={<Button className="mt-2" onClick={openNew}>Ajouter un prestataire</Button>} />
+        <EmptyState title="Aucun prestataire pour le moment" subtitle="Ajoutez vos artisans et professionnels de confiance." action={<Button className="mt-2" onClick={() => modal.openNew()}>Ajouter un prestataire</Button>} />
       ) : listeFiltree.length === 0 ? (
-        <EmptyState title="Aucun prestataire pour ce métier" subtitle="Ajoutez-en un ou choisissez un autre métier dans le filtre." action={<Button className="mt-2" onClick={openNew}>Ajouter un prestataire</Button>} />
+        <EmptyState title="Aucun prestataire pour ce métier" subtitle="Ajoutez-en un ou choisissez un autre métier dans le filtre." action={<Button className="mt-2" onClick={() => modal.openNew()}>Ajouter un prestataire</Button>} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {listeFiltree.map((p) => (
@@ -60,7 +50,7 @@ export default function Prestataires() {
                 {p.adresse && <p>{p.adresse}</p>}
               </div>
               <div className="mt-3 flex gap-2">
-                <Button variant="ghost" onClick={() => openEdit(p)}>Modifier</Button>
+                <Button variant="ghost" onClick={() => modal.openEdit(p)}>Modifier</Button>
                 <Button variant="danger" onClick={() => remove(p)}>Supprimer</Button>
               </div>
             </Card>
@@ -69,35 +59,35 @@ export default function Prestataires() {
       )}
 
       <Modal
-        open={!!modal}
-        onClose={() => setModal(null)}
-        title={modal?.mode === 'edit' ? 'Modifier le prestataire' : 'Ajouter le prestataire'}
+        open={!!modal.modal}
+        onClose={modal.close}
+        title={modal.modal?.mode === 'edit' ? 'Modifier le prestataire' : 'Ajouter le prestataire'}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModal(null)}>Annuler</Button>
+            <Button variant="secondary" onClick={modal.close}>Annuler</Button>
             <Button type="submit" form="form-prestataire">Enregistrer</Button>
           </>
         }
       >
-        {modal && (
-          <form id="form-prestataire" onSubmit={save} className="space-y-4">
+        {modal.modal && (
+          <form id="form-prestataire" onSubmit={modal.save} className="space-y-4">
             <Field label="Nom / raison sociale">
-              <Input required value={modal.values.nom} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, nom: e.target.value } }))} />
+              <Input required value={modal.modal.values.nom} onChange={modal.field('nom')} />
             </Field>
             <Field label="Métier">
-              <Input list="metiers-existants" placeholder="Plombier, électricien, ..." value={modal.values.metier} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, metier: e.target.value } }))} />
+              <Input list="metiers-existants" placeholder="Plombier, électricien, ..." value={modal.modal.values.metier} onChange={modal.field('metier')} />
               <datalist id="metiers-existants">
                 {metiers.map((m) => <option key={m} value={m} />)}
               </datalist>
             </Field>
             <Field label="Téléphone">
-              <Input value={modal.values.telephone} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, telephone: e.target.value } }))} />
+              <Input value={modal.modal.values.telephone} onChange={modal.field('telephone')} />
             </Field>
             <Field label="Adresse e-mail">
-              <Input type="email" value={modal.values.email} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, email: e.target.value } }))} />
+              <Input type="email" value={modal.modal.values.email} onChange={modal.field('email')} />
             </Field>
             <Field label="Adresse">
-              <Input value={modal.values.adresse} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, adresse: e.target.value } }))} />
+              <Input value={modal.modal.values.adresse} onChange={modal.field('adresse')} />
             </Field>
           </form>
         )}

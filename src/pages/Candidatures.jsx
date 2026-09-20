@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { useStore } from '../lib/store.jsx'
+import { useCrudModal } from '../lib/useCrudModal.js'
+import { useConfirm } from '../lib/confirm.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, Badge, EmptyState } from '../components/ui.jsx'
 import { formatDate } from '../lib/utils.js'
 
@@ -14,23 +16,11 @@ const emptyCandidature = { bienId: '', nom: '', prenom: '', telephone: '', email
 
 export default function Candidatures() {
   const { state, candidatures } = useStore()
-  const [modal, setModal] = useState(null)
+  const confirm = useConfirm()
+  const modal = useCrudModal(candidatures, emptyCandidature)
 
-  function openNew() {
-    setModal({ mode: 'create', values: emptyCandidature })
-  }
-  function openEdit(c) {
-    setModal({ mode: 'edit', id: c.id, values: { ...c } })
-  }
-  function save(e) {
-    e.preventDefault()
-    const { mode, id, values } = modal
-    if (mode === 'create') candidatures.add(values)
-    else candidatures.update(id, values)
-    setModal(null)
-  }
-  function remove(c) {
-    if (confirm(`Supprimer la candidature de ${c.prenom} ${c.nom} ?`)) candidatures.remove(c.id)
+  async function remove(c) {
+    if (await confirm(`Supprimer la candidature de ${c.prenom} ${c.nom} ?`, { danger: true })) candidatures.remove(c.id)
   }
 
   function statutInfo(v) {
@@ -42,11 +32,11 @@ export default function Candidatures() {
       <PageHeader
         title="Candidatures"
         subtitle="Dossiers de location reçus"
-        action={<Button onClick={openNew}>+ Ajouter une candidature</Button>}
+        action={<Button onClick={() => modal.openNew()}>+ Ajouter une candidature</Button>}
       />
 
       {state.candidatures.length === 0 ? (
-        <EmptyState title="Aucune candidature pour le moment" subtitle="Les nouvelles demandes de location apparaîtront ici." action={<Button className="mt-2" onClick={openNew}>Ajouter une candidature</Button>} />
+        <EmptyState title="Aucune candidature pour le moment" subtitle="Les nouvelles demandes de location apparaîtront ici." action={<Button className="mt-2" onClick={() => modal.openNew()}>Ajouter une candidature</Button>} />
       ) : (
         <Card>
           <div className="overflow-x-auto">
@@ -73,7 +63,7 @@ export default function Candidatures() {
                       <td className="py-2 pr-4 text-slate-600">{c.telephone || c.email || '—'}</td>
                       <td className="py-2 pr-4"><Badge tone={info.tone}>{info.label}</Badge></td>
                       <td className="py-2 text-right">
-                        <Button variant="ghost" onClick={() => openEdit(c)}>Modifier</Button>
+                        <Button variant="ghost" onClick={() => modal.openEdit(c)}>Modifier</Button>
                         <Button variant="danger" onClick={() => remove(c)}>Suppr.</Button>
                       </td>
                     </tr>
@@ -86,28 +76,28 @@ export default function Candidatures() {
       )}
 
       <Modal
-        open={!!modal}
-        onClose={() => setModal(null)}
-        title={modal?.mode === 'edit' ? 'Modifier la candidature' : 'Ajouter une candidature'}
+        open={!!modal.modal}
+        onClose={modal.close}
+        title={modal.modal?.mode === 'edit' ? 'Modifier la candidature' : 'Ajouter une candidature'}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModal(null)}>Annuler</Button>
+            <Button variant="secondary" onClick={modal.close}>Annuler</Button>
             <Button type="submit" form="form-candidature">Enregistrer</Button>
           </>
         }
       >
-        {modal && (
-          <form id="form-candidature" onSubmit={save} className="space-y-4">
+        {modal.modal && (
+          <form id="form-candidature" onSubmit={modal.save} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <Field label="Prénom">
-                <Input required value={modal.values.prenom} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, prenom: e.target.value } }))} />
+                <Input required value={modal.modal.values.prenom} onChange={modal.field('prenom')} />
               </Field>
               <Field label="Nom">
-                <Input required value={modal.values.nom} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, nom: e.target.value } }))} />
+                <Input required value={modal.modal.values.nom} onChange={modal.field('nom')} />
               </Field>
             </div>
             <Field label="Bien souhaité">
-              <Select value={modal.values.bienId} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, bienId: e.target.value } }))}>
+              <Select value={modal.modal.values.bienId} onChange={modal.field('bienId')}>
                 <option value="">— Aucun —</option>
                 {state.biens.map((b) => {
                   const immeuble = state.immeubles.find((i) => i.id === b.immeubleId)
@@ -116,17 +106,17 @@ export default function Candidatures() {
               </Select>
             </Field>
             <Field label="Téléphone">
-              <Input value={modal.values.telephone} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, telephone: e.target.value } }))} />
+              <Input value={modal.modal.values.telephone} onChange={modal.field('telephone')} />
             </Field>
             <Field label="Adresse e-mail">
-              <Input type="email" value={modal.values.email} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, email: e.target.value } }))} />
+              <Input type="email" value={modal.modal.values.email} onChange={modal.field('email')} />
             </Field>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Date d'entrée souhaitée">
-                <Input type="date" value={modal.values.dateSouhaitee} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, dateSouhaitee: e.target.value } }))} />
+                <Input type="date" value={modal.modal.values.dateSouhaitee} onChange={modal.field('dateSouhaitee')} />
               </Field>
               <Field label="Statut">
-                <Select value={modal.values.statut} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, statut: e.target.value } }))}>
+                <Select value={modal.modal.values.statut} onChange={modal.field('statut')}>
                   {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </Select>
               </Field>

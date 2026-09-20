@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import { useStore } from '../lib/store.jsx'
+import { useCrudModal } from '../lib/useCrudModal.js'
+import { useConfirm } from '../lib/confirm.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, Textarea, Badge, EmptyState } from '../components/ui.jsx'
 import { formatDate } from '../lib/utils.js'
 
@@ -18,23 +20,11 @@ function todayISO() {
 
 export default function Agenda() {
   const { state, agenda } = useStore()
-  const [modal, setModal] = useState(null)
+  const confirm = useConfirm()
+  const modal = useCrudModal(agenda, emptyEvenement)
 
-  function openNew() {
-    setModal({ mode: 'create', values: { ...emptyEvenement, date: todayISO() } })
-  }
-  function openEdit(ev) {
-    setModal({ mode: 'edit', id: ev.id, values: { ...ev } })
-  }
-  function save(e) {
-    e.preventDefault()
-    const { mode, id, values } = modal
-    if (mode === 'create') agenda.add(values)
-    else agenda.update(id, values)
-    setModal(null)
-  }
-  function remove(ev) {
-    if (confirm(`Supprimer l'événement "${ev.titre}" ?`)) agenda.remove(ev.id)
+  async function remove(ev) {
+    if (await confirm(`Supprimer l'événement "${ev.titre}" ?`, { danger: true })) agenda.remove(ev.id)
   }
 
   const trie = useMemo(() => [...state.agenda].sort((a, b) => new Date(a.date) - new Date(b.date)), [state.agenda])
@@ -49,11 +39,11 @@ export default function Agenda() {
       <PageHeader
         title="Agenda"
         subtitle="Visites, rendez-vous et échéances"
-        action={<Button onClick={openNew}>+ Ajouter un événement</Button>}
+        action={<Button onClick={() => modal.openNew({ date: todayISO() })}>+ Ajouter un événement</Button>}
       />
 
       {trie.length === 0 ? (
-        <EmptyState title="Aucun événement planifié" subtitle="Ajoutez une visite, un rendez-vous ou une échéance." action={<Button className="mt-2" onClick={openNew}>Ajouter un événement</Button>} />
+        <EmptyState title="Aucun événement planifié" subtitle="Ajoutez une visite, un rendez-vous ou une échéance." action={<Button className="mt-2" onClick={() => modal.openNew({ date: todayISO() })}>Ajouter un événement</Button>} />
       ) : (
         <Card>
           <div className="divide-y divide-slate-100">
@@ -71,7 +61,7 @@ export default function Agenda() {
                     <p className="text-sm text-slate-500">{formatDate(ev.date)}{ev.description ? ` — ${ev.description}` : ''}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="ghost" onClick={() => openEdit(ev)}>Modifier</Button>
+                    <Button variant="ghost" onClick={() => modal.openEdit(ev)}>Modifier</Button>
                     <Button variant="danger" onClick={() => remove(ev)}>Supprimer</Button>
                   </div>
                 </div>
@@ -82,33 +72,33 @@ export default function Agenda() {
       )}
 
       <Modal
-        open={!!modal}
-        onClose={() => setModal(null)}
-        title={modal?.mode === 'edit' ? "Modifier l'événement" : 'Ajouter un événement'}
+        open={!!modal.modal}
+        onClose={modal.close}
+        title={modal.modal?.mode === 'edit' ? "Modifier l'événement" : 'Ajouter un événement'}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModal(null)}>Annuler</Button>
+            <Button variant="secondary" onClick={modal.close}>Annuler</Button>
             <Button type="submit" form="form-evenement">Enregistrer</Button>
           </>
         }
       >
-        {modal && (
-          <form id="form-evenement" onSubmit={save} className="space-y-4">
+        {modal.modal && (
+          <form id="form-evenement" onSubmit={modal.save} className="space-y-4">
             <Field label="Titre">
-              <Input required value={modal.values.titre} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, titre: e.target.value } }))} />
+              <Input required value={modal.modal.values.titre} onChange={modal.field('titre')} />
             </Field>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Date">
-                <Input type="date" required value={modal.values.date} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, date: e.target.value } }))} />
+                <Input type="date" required value={modal.modal.values.date} onChange={modal.field('date')} />
               </Field>
               <Field label="Type">
-                <Select value={modal.values.type} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, type: e.target.value } }))}>
+                <Select value={modal.modal.values.type} onChange={modal.field('type')}>
                   {TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </Select>
               </Field>
             </div>
             <Field label="Description">
-              <Textarea value={modal.values.description} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, description: e.target.value } }))} />
+              <Textarea value={modal.modal.values.description} onChange={modal.field('description')} />
             </Field>
           </form>
         )}

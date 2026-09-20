@@ -125,6 +125,81 @@ dans le Dashboard navigue vers la page concernée).
 3. Si la page doit être atteignable depuis une autre page (ex. un lien
    "voir le détail"), utiliser `useNavigate()` (`lib/nav.jsx`) plutôt que de
    coupler les pages entre elles directement.
+4. Si la page gère une collection avec un formulaire de création/édition en
+   modale (le cas le plus courant), utiliser `useCrudModal` plutôt que de
+   réécrire le pattern à la main — voir la section suivante.
+
+## Modales de formulaire (`useCrudModal`) et confirmations (`useConfirm`)
+
+Ces deux primitives évitent de dupliquer le code que chaque page CRUD
+réécrivait auparavant (state de modale, ouverture en création/édition,
+`window.confirm`/`window.alert`).
+
+### `useCrudModal` (`src/lib/useCrudModal.js`)
+
+Encapsule le pattern "modale de création/édition" utilisé par Immeubles,
+Locataires, Baux, Travaux, Prestataires, Candidatures, Agenda et Sinistres :
+
+```jsx
+const emptyLocataire = { nom: '', prenom: '', statut: 'nouveau' }
+
+function MaPage() {
+  const { locataires } = useStore()
+  const modal = useCrudModal(locataires, emptyLocataire)
+  // optionnel : un 3e argument (values) => payload pour coercer des nombres,
+  // calculer des champs dérivés, etc. avant add/update — voir Baux.jsx ou
+  // Sinistres.jsx pour un exemple.
+
+  return (
+    <>
+      <Button onClick={() => modal.openNew()}>+ Ajouter</Button>
+      {/* modal.openNew(overrides) et modal.openEdit(item, overrides) acceptent
+          un objet ou une fonction pour préremplir certains champs */}
+
+      <Modal open={!!modal.modal} onClose={modal.close} ...>
+        <form onSubmit={modal.save}>
+          <Input value={modal.modal.values.nom} onChange={modal.field('nom')} />
+          {/* field(key) est un raccourci pour un onChange qui met à jour
+              modal.modal.values[key] avec e.target.value */}
+        </form>
+      </Modal>
+    </>
+  )
+}
+```
+
+`modal.setValues(patch)` reste disponible pour les cas qui ne sont pas un
+simple champ texte (un `onChange` qui réinitialise un autre champ, un
+tableau de photos ajouté par un `FileReader`...) — voir `Travaux.jsx`.
+
+Ne pas utiliser `useCrudModal` pour une modale qui n'est pas un
+"formulaire → add/update d'une entité" (ex. la modale de cellule de
+`GrillePaiements.jsx`, ou la modale à 3 modes `create`/`view` des états des
+lieux dans `DossierLocataire.jsx`) : le pattern générique ajouterait de la
+confusion plutôt que d'en retirer.
+
+### `useConfirm` (`src/lib/confirm.jsx`)
+
+Remplace `window.confirm()` / `window.alert()` par une boîte de dialogue
+stylée cohérente avec le reste de l'app (les dialogues natifs du navigateur
+sont visuellement disparates et ne peuvent pas être habillés). Rendue une
+seule fois au sommet de l'app (`ConfirmProvider` dans `main.jsx`) :
+
+```jsx
+const confirm = useConfirm()
+
+// Remplace : if (confirm('Supprimer ?')) foo.remove(id)
+async function remove(item) {
+  if (await confirm(`Supprimer "${item.nom}" ?`, { danger: true })) foo.remove(item.id)
+}
+
+// Remplace : alert('Action impossible.')
+await confirm('Action impossible : ...', { okOnly: true })
+```
+
+`danger: true` met le bouton de confirmation en évidence (action
+destructive) ; `okOnly: true` n'affiche qu'un bouton "OK" (équivalent d'une
+alerte) et résout toujours `true`.
 
 ## Modèle de données détaillé
 
@@ -210,3 +285,9 @@ l'organisation générale. En résumé :
   rendu plutôt qu'en dépendant des données de démonstration de `seed.js`
   (générées avec des dates relatives, donc non stables d'une exécution à
   l'autre).
+- Pour une page qui utilise `useConfirm()` (la plupart des pages avec une
+  suppression), utiliser `renderWithProviders` (`src/test/renderWithProviders.jsx`)
+  plutôt que d'envelopper manuellement `<StoreProvider>`/`<ConfirmProvider>` —
+  et interagir avec la boîte de dialogue de confirmation comme avec n'importe
+  quel autre élément de l'UI (elle n'est plus un `window.confirm` à mocker) :
+  voir `src/pages/Baux.test.jsx` pour un exemple complet.

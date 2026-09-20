@@ -3,9 +3,11 @@ import { useStore } from '../lib/store.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Badge, EmptyState } from '../components/ui.jsx'
 import GrillePaiements from '../components/GrillePaiements.jsx'
 import { formatMontant, formatDate, labelMois, moisCourant, moisDecale, statutPaiementInfo, montantAReverser, statutReversement, STATUTS_REVERSEMENT, texteRappelLoyer } from '../lib/utils.js'
+import { useConfirm } from '../lib/confirm.jsx'
 
 export default function Paiements() {
   const { state, paiements, messages } = useStore()
+  const confirm = useConfirm()
   const [onglet, setOnglet] = useState('mois')
   const [mois, setMois] = useState(moisCourant())
   const [modal, setModal] = useState(null)
@@ -64,8 +66,8 @@ export default function Paiements() {
     setModal(null)
   }
 
-  function annulerPaiement(ligne) {
-    if (ligne.paiement && confirm('Annuler ce paiement ?')) paiements.remove(ligne.paiement.id)
+  async function annulerPaiement(ligne) {
+    if (ligne.paiement && (await confirm('Annuler ce paiement ?', { danger: true }))) paiements.remove(ligne.paiement.id)
   }
 
   function marquerReverse(ligne) {
