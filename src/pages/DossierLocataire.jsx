@@ -1,40 +1,21 @@
 import React, { useMemo, useRef, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
-import { Card, Button, Badge, Modal, Field, Input, Select, Textarea, EmptyState } from '../components/ui.jsx'
-import { formatDate, formatMontant, labelMois, moisCourant, statutPaiementInfo, statutLocataireInfo, texteRappelLoyer } from '../lib/utils.js'
+import { Button, Badge, EmptyState } from '../components/ui.jsx'
+import { formatDate, labelMois, moisCourant, statutPaiementInfo, statutLocataireInfo, texteRappelLoyer } from '../lib/utils.js'
 import { itemsAdminBail } from '../lib/taches.js'
 import { useConfirm } from '../lib/confirm.jsx'
-
-const TYPES_DOCUMENT = [
-  { value: 'carte_identite', label: "Pièce d'identité" },
-  { value: 'contrat_bail', label: 'Contrat de bail' },
-  { value: 'assurance', label: 'Attestation assurance' },
-  { value: 'autre', label: 'Autre document' },
-]
-
-const PIECES_DEFAUT = ['Entrée', 'Séjour', 'Cuisine', 'Chambre 1', 'Chambre 2', 'Salle de bain', 'WC']
-
-const ETATS_PIECE = [
-  { value: 'bon', label: 'Bon' },
-  { value: 'moyen', label: 'Moyen' },
-  { value: 'mauvais', label: 'Mauvais' },
-]
-
-function emptyEtatDesLieux(bailId, type) {
-  return {
-    bailId,
-    type,
-    date: new Date().toISOString().slice(0, 10),
-    pieces: PIECES_DEFAUT.map((nom) => ({ nom, etat: 'bon', commentaire: '' })),
-    compteurs: { electricite: '', eau: '', gaz: '' },
-    nombreCles: '',
-    observations: '',
-  }
-}
-
-function toneEtat(etat) {
-  return etat === 'bon' ? 'green' : etat === 'moyen' ? 'amber' : 'red'
-}
+import { emptyEtatDesLieux } from './dossier-locataire/constants.js'
+import CarteCoordonnees from './dossier-locataire/CarteCoordonnees.jsx'
+import CarteBailActif from './dossier-locataire/CarteBailActif.jsx'
+import CarteHistoriquePaiements from './dossier-locataire/CarteHistoriquePaiements.jsx'
+import CarteSuiviAdministratif from './dossier-locataire/CarteSuiviAdministratif.jsx'
+import CarteDocuments from './dossier-locataire/CarteDocuments.jsx'
+import CarteTravaux from './dossier-locataire/CarteTravaux.jsx'
+import CarteEtatsDesLieux from './dossier-locataire/CarteEtatsDesLieux.jsx'
+import CarteMessagerie from './dossier-locataire/CarteMessagerie.jsx'
+import ModalEtatDesLieux from './dossier-locataire/ModalEtatDesLieux.jsx'
+import ModalApercuDocument from './dossier-locataire/ModalApercuDocument.jsx'
+import ModalRelance from './dossier-locataire/ModalRelance.jsx'
 
 export default function DossierLocataire({ locataireId, onBack }) {
   const { state, locataires, documents, etatsDesLieux, messages, baux } = useStore()
@@ -146,6 +127,10 @@ export default function DossierLocataire({ locataireId, onBack }) {
     setRappel(texte)
   }
 
+  function apercuPhotoTravail(travail, photo) {
+    setApercuDocument({ nom: `${travail.titre} (${photo.moment === 'avant' ? 'avant' : 'après'})`, mime: 'image/*', dataUrl: photo.dataUrl })
+  }
+
   const itemsAdmin = bail ? itemsAdminBail(bail) : []
   const statutMoisCourant = bail ? statutPaiementInfo(paiementMoisCourant?.statut || 'attendu') : null
   const meriteRelance = bail && (paiementMoisCourant?.statut === 'retard' || paiementMoisCourant?.statut === 'partiel')
@@ -167,311 +152,43 @@ export default function DossierLocataire({ locataireId, onBack }) {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Coordonnées</h2>
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between"><dt className="text-slate-500">E-mail</dt><dd className="text-slate-800">{locataire.email || '—'}</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-500">Téléphone</dt><dd className="text-slate-800">{locataire.telephone || '—'}</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-500">Entrée</dt><dd className="text-slate-800">{formatDate(locataire.dateEntree)}</dd></div>
-          </dl>
-          <div className="mt-3 border-t border-slate-100 pt-3">
-            <p className="mb-1.5 text-xs font-medium text-slate-500">Notes internes</p>
-            <Textarea
-              placeholder="Ex. : accord de paiement en 2 fois, difficulté financière temporaire..."
-              defaultValue={locataire.notes || ''}
-              onBlur={(e) => enregistrerNotes(e.target.value)}
-              rows={3}
-            />
-          </div>
-        </Card>
-
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Bail actif</h2>
-          {bail ? (
-            <dl className="space-y-2 text-sm">
-              <div className="flex justify-between"><dt className="text-slate-500">Période</dt><dd className="text-slate-800">{formatDate(bail.dateDebut)} → {formatDate(bail.dateFin)}</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-500">Loyer + charges</dt><dd className="font-medium text-slate-900">{formatMontant(Number(bail.loyer) + Number(bail.charges))}</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-500">Dépôt garantie</dt><dd className="text-slate-800">{formatMontant(bail.depotGarantie)}</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-500">Fréquence</dt><dd className="text-slate-800 capitalize">{bail.frequence || 'mensuel'}</dd></div>
-            </dl>
-          ) : (
-            <p className="text-sm text-slate-500">Aucun bail actif pour ce locataire.</p>
-          )}
-        </Card>
-
-        <Card>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-700">Historique des paiements</h2>
-            {statutMoisCourant && <Badge tone={statutMoisCourant.tone}>Ce mois : {statutMoisCourant.label}</Badge>}
-          </div>
-          {paiementsRecents.length === 0 ? (
-            <p className="text-sm text-slate-500">Aucun paiement enregistré.</p>
-          ) : (
-            <div className="space-y-1.5">
-              {paiementsRecents.map((p) => {
-                const info = statutPaiementInfo(p.statut)
-                return (
-                  <div key={p.id} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-600">{labelMois(p.mois)}</span>
-                    <Badge tone={info.tone}>{info.label}{p.montantPaye ? ` — ${formatMontant(p.montantPaye)}` : ''}</Badge>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-          {meriteRelance && (
-            <Button variant="danger" className="mt-3 w-full" onClick={relancer}>Envoyer une relance pour {labelMois(moisCourant())}</Button>
-          )}
-        </Card>
+        <CarteCoordonnees locataire={locataire} onNotesChange={enregistrerNotes} />
+        <CarteBailActif bail={bail} />
+        <CarteHistoriquePaiements
+          statutMoisCourant={statutMoisCourant}
+          paiementsRecents={paiementsRecents}
+          meriteRelance={meriteRelance}
+          onRelancer={relancer}
+        />
       </div>
 
-      {bail && (
-        <Card className="mt-6">
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Suivi administratif du dossier</h2>
-          <div className="divide-y divide-slate-100">
-            {itemsAdmin.map((item) => (
-              <div key={item.key} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${item.ok ? 'bg-success-500' : 'bg-danger-500'}`} aria-hidden />
-                  <span className="text-sm text-slate-700">{item.label}</span>
-                  <span className="text-xs text-slate-400">
-                    {item.valeur ? `Dernière fois : ${formatDate(item.valeur)}` : 'Jamais renseigné'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {item.ok ? <Badge tone="green">À jour</Badge> : <Badge tone="red">À faire</Badge>}
-                  <Button variant="ghost" onClick={() => marquerFaitAujourdhui(item.key)}>Marquer fait</Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      <CarteSuiviAdministratif bail={bail} itemsAdmin={itemsAdmin} onMarquerFait={marquerFaitAujourdhui} />
 
-      <Card className="mt-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">Documents</h2>
-          <div className="flex items-center gap-2">
-            <Select value={typeUpload} onChange={(e) => setTypeUpload(e.target.value)} className="max-w-[10rem] text-xs">
-              {TYPES_DOCUMENT.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </Select>
-            <Button variant="secondary" onClick={() => fileInput.current?.click()}>+ Ajouter</Button>
-            <input ref={fileInput} type="file" accept="image/*,application/pdf" className="hidden" onChange={importerDocument} />
-          </div>
-        </div>
-        {docsLocataire.length === 0 ? (
-          <p className="text-sm text-slate-500">Aucun document : pièce d'identité, contrat de bail signé, attestation d'assurance...</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {docsLocataire.map((doc) => (
-              <div key={doc.id} className="rounded-lg border border-slate-200 p-2">
-                <button onClick={() => setApercuDocument(doc)} className="block w-full">
-                  {doc.mime?.startsWith('image/') ? (
-                    <img src={doc.dataUrl} alt={doc.nom} className="h-24 w-full rounded object-cover" />
-                  ) : (
-                    <div className="flex h-24 w-full items-center justify-center rounded bg-slate-100 text-3xl">🧾</div>
-                  )}
-                </button>
-                <p className="mt-1 truncate text-xs font-medium text-slate-700" title={doc.nom}>{doc.nom}</p>
-                <p className="text-[11px] text-slate-400">{TYPES_DOCUMENT.find((t) => t.value === doc.type)?.label}</p>
-                <Button variant="danger" className="mt-1 w-full !py-1 text-xs" onClick={() => supprimerDocument(doc)}>Supprimer</Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+      <CarteDocuments
+        docs={docsLocataire}
+        typeUpload={typeUpload}
+        setTypeUpload={setTypeUpload}
+        fileInput={fileInput}
+        onImporter={importerDocument}
+        onSupprimer={supprimerDocument}
+        onApercu={setApercuDocument}
+      />
 
-      <Card className="mt-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-700">Travaux / Interventions</h2>
-        {travauxBien.length === 0 ? (
-          <p className="text-sm text-slate-500">Aucune intervention enregistrée pour ce logement.</p>
-        ) : (
-          <div className="space-y-3">
-            {travauxBien.map((t) => {
-              const prestataire = state.prestataires.find((p) => p.id === t.prestataireId)
-              return (
-                <div key={t.id} className="rounded-lg border border-slate-200 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-slate-800">{t.titre}</p>
-                    <Badge tone={t.statut === 'termine' ? 'green' : t.statut === 'en_cours' ? 'amber' : 'slate'}>
-                      {t.statut === 'termine' ? 'Terminé' : t.statut === 'en_cours' ? 'En cours' : 'À planifier'}
-                    </Badge>
-                  </div>
-                  {prestataire && <p className="text-xs text-slate-400">Prestataire : {prestataire.nom}</p>}
-                  {t.description && <p className="mt-1 text-sm text-slate-500">{t.description}</p>}
-                  {t.photos?.length > 0 && (
-                    <div className="mt-2 flex gap-1.5 overflow-x-auto">
-                      {t.photos.map((p) => (
-                        <button key={p.id} type="button" onClick={() => setApercuDocument({ nom: `${t.titre} (${p.moment === 'avant' ? 'avant' : 'après'})`, mime: 'image/*', dataUrl: p.dataUrl })} className="shrink-0">
-                          <img src={p.dataUrl} alt="" className="h-14 w-14 rounded object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {t.rapportPrestataire && <p className="mt-2 text-sm text-slate-600">📝 {t.rapportPrestataire}</p>}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </Card>
+      <CarteTravaux travaux={travauxBien} prestataires={state.prestataires} onApercuPhoto={apercuPhotoTravail} />
 
-      <Card className="mt-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">États des lieux</h2>
-          <div className="flex gap-2">
-            <Button variant="secondary" disabled={!bail} onClick={() => ouvrirNouvelEdl('entree')}>+ État d'entrée</Button>
-            <Button variant="secondary" disabled={!bail} onClick={() => ouvrirNouvelEdl('sortie')}>+ État de sortie</Button>
-          </div>
-        </div>
-        {!bail ? (
-          <p className="text-sm text-slate-500">Un bail actif est nécessaire pour créer un état des lieux.</p>
-        ) : edlBail.length === 0 ? (
-          <p className="text-sm text-slate-500">Aucun état des lieux enregistré pour ce bail.</p>
-        ) : (
-          <div className="space-y-2">
-            {edlBail.map((edl) => (
-              <div key={edl.id} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
-                <div>
-                  <span className="font-medium text-slate-800">{edl.type === 'entree' ? "État des lieux d'entrée" : 'État des lieux de sortie'}</span>
-                  <span className="ml-2 text-sm text-slate-500">{formatDate(edl.date)}</span>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="ghost" onClick={() => ouvrirEdl(edl)}>Consulter</Button>
-                  <Button variant="danger" onClick={() => supprimerEdl(edl)}>Suppr.</Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+      <CarteEtatsDesLieux
+        bail={bail}
+        etatsDesLieux={edlBail}
+        onNouveau={ouvrirNouvelEdl}
+        onConsulter={ouvrirEdl}
+        onSupprimer={supprimerEdl}
+      />
 
-      <Card className="mt-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-700">Messagerie récente</h2>
-        {messagesLocataire.length === 0 ? (
-          <p className="text-sm text-slate-500">Aucun message échangé avec ce locataire.</p>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {messagesLocataire.slice(0, 3).map((m) => (
-              <div key={m.id} className="py-2">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-slate-800">{m.sujet}</p>
-                  <Badge tone={m.sens === 'envoye' ? 'blue' : 'slate'}>{m.sens === 'envoye' ? 'Envoyé' : 'Reçu'}</Badge>
-                </div>
-                <p className="text-xs text-slate-400">{formatDate(m.date)}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+      <CarteMessagerie messages={messagesLocataire} />
 
-      <Modal open={!!rappel} onClose={() => setRappel(null)} title="Relance enregistrée" footer={<Button onClick={() => setRappel(null)}>Fermer</Button>}>
-        {rappel && (
-          <>
-            <pre className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{rappel}</pre>
-            <p className="mt-2 text-xs text-slate-400">Cette relance a été enregistrée dans la messagerie du locataire.</p>
-          </>
-        )}
-      </Modal>
-
-      <Modal open={!!apercuDocument} onClose={() => setApercuDocument(null)} title={apercuDocument?.nom} footer={<Button onClick={() => setApercuDocument(null)}>Fermer</Button>}>
-        {apercuDocument?.mime?.startsWith('image/') ? (
-          <img src={apercuDocument.dataUrl} alt={apercuDocument.nom} className="w-full rounded-lg" />
-        ) : (
-          <a href={apercuDocument?.dataUrl} target="_blank" rel="noreferrer" className="text-brand-600 underline">Ouvrir le document</a>
-        )}
-      </Modal>
-
-      <Modal
-        open={!!modalEdl}
-        onClose={() => setModalEdl(null)}
-        title={modalEdl?.values?.type === 'sortie' ? 'État des lieux de sortie' : "État des lieux d'entrée"}
-        footer={
-          modalEdl?.mode === 'create' ? (
-            <>
-              <Button variant="secondary" onClick={() => setModalEdl(null)}>Annuler</Button>
-              <Button type="submit" form="form-edl">Enregistrer</Button>
-            </>
-          ) : (
-            <Button onClick={() => setModalEdl(null)}>Fermer</Button>
-          )
-        }
-      >
-        {modalEdl && modalEdl.mode === 'create' && (
-          <form id="form-edl" onSubmit={sauverEdl} className="space-y-4">
-            <Field label="Date">
-              <Input type="date" value={modalEdl.values.date} onChange={(e) => setModalEdl((m) => ({ ...m, values: { ...m.values, date: e.target.value } }))} />
-            </Field>
-            <div>
-              <p className="mb-2 text-sm font-medium text-slate-700">État par pièce</p>
-              <div className="space-y-2">
-                {modalEdl.values.pieces.map((p, i) => (
-                  <div key={p.nom} className="grid grid-cols-3 gap-2">
-                    <span className="self-center text-sm text-slate-600">{p.nom}</span>
-                    <Select
-                      value={p.etat}
-                      onChange={(e) => setModalEdl((m) => {
-                        const pieces = [...m.values.pieces]
-                        pieces[i] = { ...pieces[i], etat: e.target.value }
-                        return { ...m, values: { ...m.values, pieces } }
-                      })}
-                    >
-                      {ETATS_PIECE.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                    </Select>
-                    <Input
-                      placeholder="Commentaire"
-                      value={p.commentaire}
-                      onChange={(e) => setModalEdl((m) => {
-                        const pieces = [...m.values.pieces]
-                        pieces[i] = { ...pieces[i], commentaire: e.target.value }
-                        return { ...m, values: { ...m.values, pieces } }
-                      })}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-4 gap-3">
-              <Field label="Élec. (index)">
-                <Input value={modalEdl.values.compteurs.electricite} onChange={(e) => setModalEdl((m) => ({ ...m, values: { ...m.values, compteurs: { ...m.values.compteurs, electricite: e.target.value } } }))} />
-              </Field>
-              <Field label="Eau (index)">
-                <Input value={modalEdl.values.compteurs.eau} onChange={(e) => setModalEdl((m) => ({ ...m, values: { ...m.values, compteurs: { ...m.values.compteurs, eau: e.target.value } } }))} />
-              </Field>
-              <Field label="Gaz (index)">
-                <Input value={modalEdl.values.compteurs.gaz} onChange={(e) => setModalEdl((m) => ({ ...m, values: { ...m.values, compteurs: { ...m.values.compteurs, gaz: e.target.value } } }))} />
-              </Field>
-              <Field label="Nb de clés">
-                <Input type="number" min="0" value={modalEdl.values.nombreCles} onChange={(e) => setModalEdl((m) => ({ ...m, values: { ...m.values, nombreCles: e.target.value } }))} />
-              </Field>
-            </div>
-            <Field label="Observations générales">
-              <Textarea value={modalEdl.values.observations} onChange={(e) => setModalEdl((m) => ({ ...m, values: { ...m.values, observations: e.target.value } }))} />
-            </Field>
-          </form>
-        )}
-
-        {modalEdl && modalEdl.mode === 'view' && (
-          <div className="space-y-4">
-            <p className="text-sm text-slate-500">Date : {formatDate(modalEdl.values.date)}</p>
-            <div className="space-y-1.5">
-              {modalEdl.values.pieces.map((p) => (
-                <div key={p.nom} className="flex items-center justify-between text-sm">
-                  <span className="text-slate-700">{p.nom}{p.commentaire ? ` — ${p.commentaire}` : ''}</span>
-                  <Badge tone={toneEtat(p.etat)}>{ETATS_PIECE.find((s) => s.value === p.etat)?.label}</Badge>
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-4 gap-3 text-sm text-slate-600">
-              <p>Élec. : {modalEdl.values.compteurs?.electricite || '—'}</p>
-              <p>Eau : {modalEdl.values.compteurs?.eau || '—'}</p>
-              <p>Gaz : {modalEdl.values.compteurs?.gaz || '—'}</p>
-              <p>Clés : {modalEdl.values.nombreCles || 0}</p>
-            </div>
-            {modalEdl.values.observations && <p className="text-sm text-slate-600">{modalEdl.values.observations}</p>}
-          </div>
-        )}
-      </Modal>
+      <ModalRelance rappel={rappel} onClose={() => setRappel(null)} />
+      <ModalApercuDocument document={apercuDocument} onClose={() => setApercuDocument(null)} />
+      <ModalEtatDesLieux modalEdl={modalEdl} setModalEdl={setModalEdl} onSave={sauverEdl} />
     </div>
   )
 }

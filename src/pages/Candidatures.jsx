@@ -3,7 +3,7 @@ import { useStore } from '../lib/store.jsx'
 import { useCrudModal } from '../lib/useCrudModal.js'
 import { useConfirm } from '../lib/confirm.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, Badge, EmptyState } from '../components/ui.jsx'
-import { formatDate } from '../lib/utils.js'
+import { formatDate, createStatutLookup } from '../lib/utils.js'
 
 const STATUTS = [
   { value: 'nouvelle', label: 'Nouvelle', tone: 'blue' },
@@ -11,6 +11,8 @@ const STATUTS = [
   { value: 'acceptee', label: 'Acceptée', tone: 'green' },
   { value: 'refusee', label: 'Refusée', tone: 'red' },
 ]
+
+const statutInfo = createStatutLookup(STATUTS)
 
 const emptyCandidature = { bienId: '', nom: '', prenom: '', telephone: '', email: '', dateSouhaitee: '', statut: 'nouvelle' }
 
@@ -21,10 +23,6 @@ export default function Candidatures() {
 
   async function remove(c) {
     if (await confirm(`Supprimer la candidature de ${c.prenom} ${c.nom} ?`, { danger: true })) candidatures.remove(c.id)
-  }
-
-  function statutInfo(v) {
-    return STATUTS.find((s) => s.value === v) || STATUTS[0]
   }
 
   return (

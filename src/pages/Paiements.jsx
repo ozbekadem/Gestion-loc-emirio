@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Badge, EmptyState } from '../components/ui.jsx'
 import GrillePaiements from '../components/GrillePaiements.jsx'
-import { formatMontant, formatDate, labelMois, moisCourant, moisDecale, statutPaiementInfo, montantAReverser, statutReversement, STATUTS_REVERSEMENT, texteRappelLoyer } from '../lib/utils.js'
+import { formatMontant, formatDate, labelMois, moisCourant, moisDecale, statutPaiementInfo, calculerStatutPaiement, montantAReverser, statutReversement, STATUTS_REVERSEMENT, texteRappelLoyer } from '../lib/utils.js'
 import { useConfirm } from '../lib/confirm.jsx'
 
 export default function Paiements() {
@@ -50,7 +50,7 @@ export default function Paiements() {
   function save(e) {
     e.preventDefault()
     const montantPaye = Number(modal.montantPaye) || 0
-    const statut = montantPaye <= 0 ? 'retard' : montantPaye < modal.montantAttendu ? 'partiel' : 'paye'
+    const statut = calculerStatutPaiement(montantPaye, modal.montantAttendu)
     const bail = state.baux.find((b) => b.id === modal.bailId)
     const payload = {
       bailId: modal.bailId,
@@ -269,7 +269,7 @@ export default function Paiements() {
             )}
             {(() => {
               const montantPaye = Number(modal.montantPaye) || 0
-              const statutPrevu = montantPaye <= 0 ? 'retard' : montantPaye < modal.montantAttendu ? 'partiel' : 'paye'
+              const statutPrevu = calculerStatutPaiement(montantPaye, modal.montantAttendu)
               const info = statutPaiementInfo(statutPrevu)
               const bail = state.baux.find((b) => b.id === modal.bailId)
               const fraisGestion = Number(bail?.fraisGestion) || 0

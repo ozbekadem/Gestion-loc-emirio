@@ -2,8 +2,9 @@ import React, { useRef, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { useCrudModal } from '../lib/useCrudModal.js'
 import { useConfirm } from '../lib/confirm.jsx'
+import { useNotifierProprietaire } from '../lib/useNotifierProprietaire.js'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, Textarea, Badge, EmptyState } from '../components/ui.jsx'
-import { formatDate, formatMontant, lienWhatsapp, lienEmail } from '../lib/utils.js'
+import { formatDate, formatMontant, lienWhatsapp, lienEmail, createStatutLookup } from '../lib/utils.js'
 import { makeId } from '../lib/id.js'
 
 const STATUTS = [
@@ -11,6 +12,8 @@ const STATUTS = [
   { value: 'en_cours', label: 'En cours', tone: 'amber' },
   { value: 'termine', label: 'Terminé', tone: 'green' },
 ]
+
+const statutInfo = createStatutLookup(STATUTS)
 
 const CATEGORIES = [
   'Plomberie', 'Électricité', 'Chauffage', 'Gaz', 'Menuiserie', 'Peinture', 'Carrelage',
@@ -33,11 +36,11 @@ function coercerTravail(values) {
 }
 
 export default function Travaux() {
-  const { state, travaux, messages } = useStore()
+  const { state, travaux } = useStore()
   const confirm = useConfirm()
   const travailModal = useCrudModal(travaux, emptyTravail, coercerTravail)
+  const { notif, setNotif, notifier } = useNotifierProprietaire()
   const [filtreImmeuble, setFiltreImmeuble] = useState('')
-  const [notif, setNotif] = useState(null)
   const [contact, setContact] = useState(null)
   const [momentPhoto, setMomentPhoto] = useState('avant')
   const photoInput = useRef(null)
@@ -69,10 +72,6 @@ export default function Travaux() {
       return poids(a) - poids(b)
     })
 
-  function statutInfo(v) {
-    return STATUTS.find((s) => s.value === v) || STATUTS[0]
-  }
-
   function notifierProprietaire(t) {
     const immeuble = state.immeubles.find((i) => i.id === t.immeubleId)
     const bien = state.biens.find((b) => b.id === t.bienId)
@@ -90,16 +89,7 @@ export default function Travaux() {
       '',
       'Cordialement,',
     ].filter(Boolean).join('\n')
-    messages.add({
-      immeubleId: immeuble.id,
-      destinataire: 'proprietaire',
-      canal: 'email',
-      sujet: `Travaux — ${t.titre} — ${immeuble.nom}`,
-      contenu: texte,
-      date: new Date().toISOString().slice(0, 10),
-      sens: 'envoye',
-    })
-    setNotif({ immeuble, texte })
+    notifier(immeuble, `Travaux — ${t.titre} — ${immeuble.nom}`, texte)
   }
 
   function contacterPrestataire(t) {

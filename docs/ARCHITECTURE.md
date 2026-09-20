@@ -201,6 +201,77 @@ await confirm('Action impossible : ...', { okOnly: true })
 destructive) ; `okOnly: true` n'affiche qu'un bouton "OK" (équivalent d'une
 alerte) et résout toujours `true`.
 
+## Listes de statuts (`createStatutLookup`) et notification propriétaire
+
+### `createStatutLookup` (`src/lib/utils.js`)
+
+Plusieurs pages définissent une liste de statuts/types (`STATUTS`, `TYPES`)
+accompagnée d'une fonction locale `statutInfo(v)` / `typeInfo(v)` qui
+retrouve l'entrée correspondante avec un repli sur une valeur par défaut si
+`v` est absente ou inconnue. `createStatutLookup(list, fallbackIndex = 0)`
+fabrique directement cette fonction :
+
+```js
+const STATUTS = [
+  { value: 'actif', label: 'Actif', tone: 'green' },
+  { value: 'termine', label: 'Terminé', tone: 'slate' },
+]
+
+const statutInfo = createStatutLookup(STATUTS)          // repli sur STATUTS[0]
+const typeInfo = createStatutLookup(TYPES, 3)             // repli sur TYPES[3]
+```
+
+Utilisé par `Baux.jsx`, `Sinistres.jsx`, `Candidatures.jsx`, `Travaux.jsx` et
+`Agenda.jsx`. `statutPaiementInfo` et `statutLocataireInfo` (aussi dans
+`utils.js`) sont eux-mêmes construits avec cette factory.
+
+`calculerStatutPaiement(montantPaye, montantAttendu)` centralise la règle
+"retard / partiel / payé" utilisée à la fois par `GrillePaiements.jsx` et
+`Paiements.jsx`, pour éviter de dupliquer le même ternaire à plusieurs
+endroits d'un même fichier.
+
+### `useNotifierProprietaire` (`src/lib/useNotifierProprietaire.js`)
+
+`Sinistres.jsx` et `Travaux.jsx` notifient toutes deux le propriétaire d'un
+immeuble en créant un message interne puis en affichant son récapitulatif
+dans une modale. Ce hook porte la partie mécanique commune (création du
+message, mémorisation du récapitulatif) ; chaque page reste responsable de
+retrouver l'immeuble concerné et de composer son texte, propre à son métier :
+
+```jsx
+const { notif, setNotif, notifier } = useNotifierProprietaire()
+
+function notifierProprietaire(sinistre) {
+  const immeuble = state.immeubles.find((i) => i.id === sinistre.immeubleId)
+  if (!immeuble) return
+  const texte = /* texte spécifique au sinistre */
+  notifier(immeuble, `Sinistre — ${sinistre.type} — ${immeuble.nom}`, texte)
+}
+```
+
+## Découper une page volumineuse en sous-composants
+
+`DossierLocataire.jsx` est composé de plusieurs sections indépendantes
+(coordonnées, bail, paiements, suivi administratif, documents, travaux,
+états des lieux, messagerie) suivies de plusieurs modales. Plutôt que de
+garder tout ça dans un seul fichier, chaque section vit dans
+`src/pages/dossier-locataire/` :
+
+- `constants.js` — listes et fonctions pures partagées par les sous-composants
+  (`TYPES_DOCUMENT`, `emptyEtatDesLieux`, `toneEtat`...).
+- `Carte*.jsx` — un composant de présentation par section, qui reçoit ses
+  données et ses callbacks en props (aucun ne lit `useStore()` directement).
+- `Modal*.jsx` — une modale par cas d'usage (relance, aperçu de document,
+  état des lieux).
+
+`DossierLocataire.jsx` reste le seul composant à lire `useStore()` : il
+calcule les données dérivées, définit les handlers (mutations du store,
+confirmations) et les distribue aux sous-composants. Ce découpage (état et
+effets de bord dans la page, présentation pure dans les sous-composants)
+est le patron à suivre si une autre page grossit au point de devenir
+difficile à lire : créer un sous-dossier `src/pages/<nom-de-la-page>/` plutôt
+que d'ajouter des composants génériques partagés entre pages sans rapport.
+
 ## Modèle de données détaillé
 
 Les relations entre collections se font par identifiants (pas

@@ -3,7 +3,7 @@ import { useStore } from '../lib/store.jsx'
 import { useCrudModal } from '../lib/useCrudModal.js'
 import { useConfirm } from '../lib/confirm.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, Textarea, Badge, EmptyState } from '../components/ui.jsx'
-import { formatDate } from '../lib/utils.js'
+import { formatDate, createStatutLookup } from '../lib/utils.js'
 
 const TYPES = [
   { value: 'visite', label: 'Visite', tone: 'blue' },
@@ -11,6 +11,8 @@ const TYPES = [
   { value: 'echeance', label: 'Échéance', tone: 'red' },
   { value: 'autre', label: 'Autre', tone: 'slate' },
 ]
+
+const typeInfo = createStatutLookup(TYPES, 3)
 
 const emptyEvenement = { date: '', titre: '', description: '', type: 'autre' }
 
@@ -29,10 +31,6 @@ export default function Agenda() {
 
   const trie = useMemo(() => [...state.agenda].sort((a, b) => new Date(a.date) - new Date(b.date)), [state.agenda])
   const today = todayISO()
-
-  function typeInfo(v) {
-    return TYPES.find((t) => t.value === v) || TYPES[3]
-  }
 
   return (
     <div>

@@ -2,8 +2,9 @@ import React, { useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { useCrudModal } from '../lib/useCrudModal.js'
 import { useConfirm } from '../lib/confirm.jsx'
+import { useNotifierProprietaire } from '../lib/useNotifierProprietaire.js'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, Textarea, Badge, EmptyState } from '../components/ui.jsx'
-import { formatDate, formatMontant } from '../lib/utils.js'
+import { formatDate, formatMontant, createStatutLookup } from '../lib/utils.js'
 
 const TYPES = ['Dégât des eaux', 'Incendie', 'Vol / cambriolage', 'Vandalisme', 'Bris de vitre', 'Autre']
 
@@ -11,6 +12,8 @@ const STATUTS = [
   { value: 'en_cours', label: 'En cours', tone: 'amber' },
   { value: 'clos', label: 'Clos', tone: 'green' },
 ]
+
+const statutInfo = createStatutLookup(STATUTS)
 
 const emptySinistre = {
   immeubleId: '', bienId: '', type: TYPES[0], compagnieAssurance: '', numeroDossier: '',
@@ -22,11 +25,11 @@ function coercerSinistre(values) {
 }
 
 export default function Sinistres() {
-  const { state, sinistres, messages } = useStore()
+  const { state, sinistres } = useStore()
   const confirm = useConfirm()
   const modal = useCrudModal(sinistres, emptySinistre, coercerSinistre)
+  const { notif, setNotif, notifier } = useNotifierProprietaire()
   const [filtreImmeuble, setFiltreImmeuble] = useState('')
-  const [notif, setNotif] = useState(null)
 
   async function remove(s) {
     if (await confirm(`Supprimer le dossier de sinistre "${s.type}" ?`, { danger: true })) sinistres.remove(s.id)
@@ -50,24 +53,11 @@ export default function Sinistres() {
       '',
       'Cordialement,',
     ].filter(Boolean).join('\n')
-    messages.add({
-      immeubleId: immeuble.id,
-      destinataire: 'proprietaire',
-      canal: 'email',
-      sujet: `Sinistre — ${s.type} — ${immeuble.nom}`,
-      contenu: texte,
-      date: new Date().toISOString().slice(0, 10),
-      sens: 'envoye',
-    })
-    setNotif({ immeuble, texte })
+    notifier(immeuble, `Sinistre — ${s.type} — ${immeuble.nom}`, texte)
   }
 
   const biensDeImmeuble = state.biens.filter((b) => b.immeubleId === modal.modal?.values.immeubleId)
   const liste = state.sinistres.filter((s) => !filtreImmeuble || s.immeubleId === filtreImmeuble)
-
-  function statutInfo(v) {
-    return STATUTS.find((s) => s.value === v) || STATUTS[0]
-  }
 
   return (
     <div>

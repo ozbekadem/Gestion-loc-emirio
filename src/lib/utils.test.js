@@ -6,7 +6,9 @@ import {
   labelMois,
   moisDecale,
   immeubleDuBail,
+  createStatutLookup,
   statutPaiementInfo,
+  calculerStatutPaiement,
   statutLocataireInfo,
   montantAReverser,
   statutReversement,
@@ -93,6 +95,47 @@ describe('immeubleDuBail', () => {
 
   it('retourne null si le bien référencé par le bail est introuvable', () => {
     expect(immeubleDuBail(state, 'bail2')).toBeNull()
+  })
+})
+
+describe('createStatutLookup', () => {
+  const list = [
+    { value: 'a', label: 'A' },
+    { value: 'b', label: 'B' },
+    { value: 'c', label: 'C' },
+  ]
+
+  it('retrouve un élément connu par sa valeur', () => {
+    const lookup = createStatutLookup(list)
+    expect(lookup('b').label).toBe('B')
+  })
+
+  it("retombe sur l'élément à l'index de repli pour une valeur inconnue ou absente", () => {
+    const lookup = createStatutLookup(list, 2)
+    expect(lookup('inexistant').label).toBe('C')
+    expect(lookup(undefined).label).toBe('C')
+  })
+
+  it('utilise le premier élément comme repli par défaut', () => {
+    const lookup = createStatutLookup(list)
+    expect(lookup('inexistant').label).toBe('A')
+  })
+})
+
+describe('calculerStatutPaiement', () => {
+  it('retourne "retard" si rien n\'a été payé', () => {
+    expect(calculerStatutPaiement(0, 800)).toBe('retard')
+    expect(calculerStatutPaiement(undefined, 800)).toBe('retard')
+    expect(calculerStatutPaiement(-10, 800)).toBe('retard')
+  })
+
+  it('retourne "partiel" si le montant payé est inférieur au montant attendu', () => {
+    expect(calculerStatutPaiement(400, 800)).toBe('partiel')
+  })
+
+  it('retourne "paye" si le montant payé atteint ou dépasse le montant attendu', () => {
+    expect(calculerStatutPaiement(800, 800)).toBe('paye')
+    expect(calculerStatutPaiement(900, 800)).toBe('paye')
   })
 })
 

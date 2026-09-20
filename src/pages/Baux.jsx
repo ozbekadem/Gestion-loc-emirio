@@ -3,7 +3,7 @@ import { useStore } from '../lib/store.jsx'
 import { useCrudModal } from '../lib/useCrudModal.js'
 import { useConfirm } from '../lib/confirm.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, EmptyState, Badge } from '../components/ui.jsx'
-import { formatDate, formatMontant } from '../lib/utils.js'
+import { formatDate, formatMontant, createStatutLookup } from '../lib/utils.js'
 import { CHECKLIST_ADMIN } from '../lib/taches.js'
 
 const STATUTS = [
@@ -22,6 +22,8 @@ const FREQUENCES = [
 function labelFrequence(v) {
   return FREQUENCES.find((f) => f.value === v)?.label || 'Mensuel'
 }
+
+const statutInfo = createStatutLookup(STATUTS)
 
 const emptyBail = {
   locataireId: '', bienId: '', dateDebut: '', dateFin: '', loyer: '', charges: '', depotGarantie: '', statut: 'actif',
@@ -79,10 +81,6 @@ export default function Baux() {
     paiementsAssocies.forEach((p) => paiements.remove(p.id))
     edlAssocies.forEach((e) => etatsDesLieux.remove(e.id))
     baux.remove(b.id)
-  }
-
-  function statutInfo(v) {
-    return STATUTS.find((s) => s.value === v) || STATUTS[0]
   }
 
   return (

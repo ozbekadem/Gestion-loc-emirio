@@ -39,6 +39,16 @@ export function immeubleDuBail(state, bailId) {
   return bien?.immeubleId || null
 }
 
+// Fabrique une fonction de lookup "valeur -> objet de statut/type" avec repli
+// sur un élément par défaut quand la valeur est absente ou inconnue. Évite de
+// dupliquer `list.find((x) => x.value === v) || list[i]` dans chaque page.
+export function createStatutLookup(list, fallbackIndex = 0) {
+  const fallback = list[fallbackIndex]
+  return function lookup(value) {
+    return list.find((item) => item.value === value) || fallback
+  }
+}
+
 export const STATUTS_PAIEMENT = [
   { value: 'paye', label: 'Payé', tone: 'green', cellClass: 'bg-success-100 text-success-700 hover:bg-success-200' },
   { value: 'partiel', label: 'Partiel', tone: 'amber', cellClass: 'bg-warning-100 text-warning-700 hover:bg-warning-200' },
@@ -46,8 +56,15 @@ export const STATUTS_PAIEMENT = [
   { value: 'attendu', label: 'Attendu', tone: 'slate', cellClass: 'bg-slate-50 text-slate-400 hover:bg-slate-100' },
 ]
 
-export function statutPaiementInfo(value) {
-  return STATUTS_PAIEMENT.find((s) => s.value === value) || STATUTS_PAIEMENT[3]
+export const statutPaiementInfo = createStatutLookup(STATUTS_PAIEMENT, 3)
+
+// Déduit le statut d'un paiement à partir du montant réellement payé face au
+// montant attendu (utilisé à la fois dans la grille de paiements et la page Paiements).
+export function calculerStatutPaiement(montantPaye, montantAttendu) {
+  const paye = Number(montantPaye) || 0
+  if (paye <= 0) return 'retard'
+  if (paye < Number(montantAttendu)) return 'partiel'
+  return 'paye'
 }
 
 export const STATUTS_LOCATAIRE = [
@@ -57,9 +74,7 @@ export const STATUTS_LOCATAIRE = [
   { value: 'nouveau', label: 'Nouveau', tone: 'slate' },
 ]
 
-export function statutLocataireInfo(value) {
-  return STATUTS_LOCATAIRE.find((s) => s.value === value) || STATUTS_LOCATAIRE[3]
-}
+export const statutLocataireInfo = createStatutLookup(STATUTS_LOCATAIRE, 3)
 
 // Reversement au propriétaire = ce qu'on lui doit une fois le loyer encaissé,
 // après déduction des frais de gestion de l'agence.
