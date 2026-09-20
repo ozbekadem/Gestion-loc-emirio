@@ -4,11 +4,15 @@ import {
   formatDate,
   moisCourant,
   labelMois,
+  moisDecale,
+  immeubleDuBail,
   statutPaiementInfo,
+  statutLocataireInfo,
   montantAReverser,
   statutReversement,
   lienWhatsapp,
   lienEmail,
+  texteRappelLoyer,
 } from './utils.js'
 
 // Selon l'environnement ICU, Intl.NumberFormat sépare les milliers et la
@@ -60,6 +64,38 @@ describe('labelMois', () => {
   })
 })
 
+describe('moisDecale', () => {
+  it('avance ou recule une clé de mois du delta demandé', () => {
+    expect(moisDecale('2026-01', 1)).toBe('2026-02')
+    expect(moisDecale('2026-01', -1)).toBe('2025-12')
+    expect(moisDecale('2026-06', 6)).toBe('2026-12')
+  })
+
+  it('gère le changement d\'année dans les deux sens', () => {
+    expect(moisDecale('2026-12', 1)).toBe('2027-01')
+    expect(moisDecale('2026-01', -12)).toBe('2025-01')
+  })
+})
+
+describe('immeubleDuBail', () => {
+  const state = {
+    baux: [{ id: 'bail1', bienId: 'bien1' }, { id: 'bail2', bienId: 'inexistant' }],
+    biens: [{ id: 'bien1', immeubleId: 'im1' }],
+  }
+
+  it('remonte du bail au bien puis à l\'immeuble', () => {
+    expect(immeubleDuBail(state, 'bail1')).toBe('im1')
+  })
+
+  it('retourne null si le bail est introuvable', () => {
+    expect(immeubleDuBail(state, 'bail-inexistant')).toBeNull()
+  })
+
+  it('retourne null si le bien référencé par le bail est introuvable', () => {
+    expect(immeubleDuBail(state, 'bail2')).toBeNull()
+  })
+})
+
 describe('statutPaiementInfo', () => {
   it('retrouve les métadonnées associées à un statut connu', () => {
     expect(statutPaiementInfo('paye').label).toBe('Payé')
@@ -69,6 +105,18 @@ describe('statutPaiementInfo', () => {
   it("retombe sur le statut 'attendu' pour une valeur inconnue", () => {
     expect(statutPaiementInfo('inexistant').value).toBe('attendu')
     expect(statutPaiementInfo(undefined).value).toBe('attendu')
+  })
+})
+
+describe('statutLocataireInfo', () => {
+  it('retrouve les métadonnées associées à un statut connu', () => {
+    expect(statutLocataireInfo('excellent_payeur').label).toBe('Excellent payeur')
+    expect(statutLocataireInfo('mauvais_payeur').tone).toBe('red')
+  })
+
+  it("retombe sur le statut 'nouveau' pour une valeur inconnue ou absente", () => {
+    expect(statutLocataireInfo('inexistant').value).toBe('nouveau')
+    expect(statutLocataireInfo(undefined).value).toBe('nouveau')
   })
 })
 
@@ -138,5 +186,14 @@ describe('lienEmail', () => {
         '&body=' +
         encodeURIComponent('Bonjour, voici le récapitulatif.'),
     )
+  })
+})
+
+describe('texteRappelLoyer', () => {
+  it('inclut le prénom du locataire et le montant formaté', () => {
+    const texte = texteRappelLoyer({ prenom: 'Julie' }, 650, 'Septembre 2026')
+    expect(texte).toContain('Bonjour Julie,')
+    expect(texte).toContain('Septembre 2026')
+    expect(sansEspacesInsecables(texte)).toContain('650 €')
   })
 })

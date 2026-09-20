@@ -3,23 +3,11 @@ import { useStore } from '../lib/store.jsx'
 import { useNavigate } from '../lib/nav.jsx'
 import { Card, PageHeader, StatCard, Button, Badge, EmptyState } from '../components/ui.jsx'
 import { LineChart, DonutChart, chartColor } from '../components/charts.jsx'
-import { formatMontant, formatDate, moisCourant, MOIS_FR } from '../lib/utils.js'
+import { formatMontant, formatDate, moisCourant, moisDecale, immeubleDuBail, MOIS_FR } from '../lib/utils.js'
 import { getTaches } from '../lib/taches.js'
 
 const URGENCE_TONE = { haute: 'red', moyenne: 'amber', basse: 'slate' }
 const STATUT_TRAVAUX_LABEL = { a_planifier: 'à planifier', en_cours: 'en cours', termine: 'terminé' }
-
-function moisDecale(moisKey, delta) {
-  const [annee, mois] = moisKey.split('-').map(Number)
-  const d = new Date(annee, mois - 1 + delta, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-
-function immeubleDuBail(state, bailId) {
-  const bail = state.baux.find((b) => b.id === bailId)
-  const bien = bail ? state.biens.find((b) => b.id === bail.bienId) : null
-  return bien?.immeubleId || null
-}
 
 function greeting() {
   const h = new Date().getHours()

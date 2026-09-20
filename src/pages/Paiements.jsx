@@ -2,38 +2,12 @@ import React, { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Badge, EmptyState } from '../components/ui.jsx'
 import GrillePaiements from '../components/GrillePaiements.jsx'
-import { formatMontant, formatDate, labelMois, statutPaiementInfo, montantAReverser, statutReversement, STATUTS_REVERSEMENT } from '../lib/utils.js'
-
-function shiftMois(moisKey, delta) {
-  const [annee, mois] = moisKey.split('-').map(Number)
-  const d = new Date(annee, mois - 1 + delta, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-
-function moisCourantKey() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-}
-
-function texteRappel(loc, montant, moisLabel) {
-  return [
-    `Objet : Rappel de loyer — ${moisLabel}`,
-    '',
-    `Bonjour ${loc.prenom},`,
-    '',
-    `Nous n'avons pas encore reçu le paiement de votre loyer de ${moisLabel}, d'un montant de ${formatMontant(montant)}.`,
-    "Merci de bien vouloir régulariser cette situation dans les meilleurs délais.",
-    '',
-    "N'hésitez pas à nous contacter si un problème empêche ce paiement.",
-    '',
-    'Cordialement,',
-  ].join('\n')
-}
+import { formatMontant, formatDate, labelMois, moisCourant, moisDecale, statutPaiementInfo, montantAReverser, statutReversement, STATUTS_REVERSEMENT, texteRappelLoyer } from '../lib/utils.js'
 
 export default function Paiements() {
   const { state, paiements, messages } = useStore()
   const [onglet, setOnglet] = useState('mois')
-  const [mois, setMois] = useState(moisCourantKey())
+  const [mois, setMois] = useState(moisCourant())
   const [modal, setModal] = useState(null)
   const [rappel, setRappel] = useState(null)
   const [filtreImmeuble, setFiltreImmeuble] = useState('')
@@ -114,7 +88,7 @@ export default function Paiements() {
   function relancer(ligne, soldeRestant) {
     if (!ligne.loc) return
     const montantDu = soldeRestant ?? ligne.montantAttendu
-    const texte = texteRappel(ligne.loc, montantDu, labelMois(mois))
+    const texte = texteRappelLoyer(ligne.loc, montantDu, labelMois(mois))
     messages.add({
       locataireId: ligne.loc.id,
       destinataire: 'locataire',
@@ -135,9 +109,9 @@ export default function Paiements() {
         action={
           onglet === 'mois' ? (
             <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={() => setMois((m) => shiftMois(m, -1))}>←</Button>
+              <Button variant="secondary" onClick={() => setMois((m) => moisDecale(m, -1))}>←</Button>
               <span className="min-w-[10rem] text-center font-medium text-slate-700">{labelMois(mois)}</span>
-              <Button variant="secondary" onClick={() => setMois((m) => shiftMois(m, 1))}>→</Button>
+              <Button variant="secondary" onClick={() => setMois((m) => moisDecale(m, 1))}>→</Button>
             </div>
           ) : null
         }
@@ -212,7 +186,7 @@ export default function Paiements() {
                       const meriteRelance =
                         l.paiement?.statut === 'retard' ||
                         l.paiement?.statut === 'partiel' ||
-                        (!l.paiement && mois < moisCourantKey())
+                        (!l.paiement && mois < moisCourant())
                       const statutRev = l.paiement ? statutReversement(l.paiement) : null
                       const revInfo = statutRev ? STATUTS_REVERSEMENT[statutRev] : null
                       return (

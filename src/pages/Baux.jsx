@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, EmptyState, Badge } from '../components/ui.jsx'
 import { formatDate, formatMontant } from '../lib/utils.js'
+import { CHECKLIST_ADMIN } from '../lib/taches.js'
 
 const STATUTS = [
   { value: 'actif', label: 'Actif', tone: 'green' },
@@ -26,14 +27,6 @@ const emptyBail = {
   fraisGestion: '', dateEntretienChaudiere: '', dateAttestationAssurance: '', dateVisiteAnnuelle: '', dateOres: '', dateSwde: '',
 }
 
-const CHECKLIST_ADMIN = [
-  { key: 'dateEntretienChaudiere', label: 'Entretien chaudière' },
-  { key: 'dateAttestationAssurance', label: 'Attestation assurance' },
-  { key: 'dateVisiteAnnuelle', label: 'Visite annuelle' },
-  { key: 'dateOres', label: 'ORES (élec. & gaz)' },
-  { key: 'dateSwde', label: 'SWDE (eau)' },
-]
-
 function loyerIndexe(values) {
   const initial = Number(values.loyerInitial)
   const iInitial = Number(values.indiceInitial)
@@ -43,7 +36,7 @@ function loyerIndexe(values) {
 }
 
 export default function Baux() {
-  const { state, baux } = useStore()
+  const { state, baux, paiements, etatsDesLieux } = useStore()
   const [modal, setModal] = useState(null)
   const [recherche, setRecherche] = useState('')
   const [filtreImmeuble, setFiltreImmeuble] = useState('')
@@ -80,7 +73,19 @@ export default function Baux() {
     setModal(null)
   }
   function remove(b) {
-    if (confirm('Supprimer ce bail ?')) baux.remove(b.id)
+    // Un bail supprimé sans nettoyer ses paiements et états des lieux laisserait
+    // des enregistrements orphelins (bailId pointant vers rien) qui continueraient
+    // à être comptés dans les reversements et la comptabilité, invisibles et
+    // impossibles à corriger depuis l'interface. On les supprime donc en cascade.
+    const paiementsAssocies = state.paiements.filter((p) => p.bailId === b.id)
+    const edlAssocies = state.etatsDesLieux.filter((e) => e.bailId === b.id)
+    const avertissement = paiementsAssocies.length > 0
+      ? ` ${paiementsAssocies.length} paiement${paiementsAssocies.length > 1 ? 's' : ''} enregistré${paiementsAssocies.length > 1 ? 's' : ''} pour ce bail seront également supprimés.`
+      : ''
+    if (!confirm(`Supprimer ce bail ?${avertissement}`)) return
+    paiementsAssocies.forEach((p) => paiements.remove(p.id))
+    edlAssocies.forEach((e) => etatsDesLieux.remove(e.id))
+    baux.remove(b.id)
   }
 
   function statutInfo(v) {

@@ -1,30 +1,8 @@
 import React, { useMemo, useRef, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, Button, Badge, Modal, Field, Input, Select, Textarea, EmptyState } from '../components/ui.jsx'
-import { formatDate, formatMontant, labelMois, moisCourant, statutPaiementInfo } from '../lib/utils.js'
+import { formatDate, formatMontant, labelMois, moisCourant, statutPaiementInfo, statutLocataireInfo, texteRappelLoyer } from '../lib/utils.js'
 import { itemsAdminBail } from '../lib/taches.js'
-
-function texteRappel(loc, montant, moisLabel) {
-  return [
-    `Objet : Rappel de loyer — ${moisLabel}`,
-    '',
-    `Bonjour ${loc.prenom},`,
-    '',
-    `Nous n'avons pas encore reçu le paiement de votre loyer de ${moisLabel}, d'un montant de ${formatMontant(montant)}.`,
-    "Merci de bien vouloir régulariser cette situation dans les meilleurs délais.",
-    '',
-    "N'hésitez pas à nous contacter si un problème empêche ce paiement.",
-    '',
-    'Cordialement,',
-  ].join('\n')
-}
-
-const STATUTS_LOCATAIRE = {
-  excellent_payeur: { label: 'Excellent payeur', tone: 'green' },
-  bon_payeur: { label: 'Bon payeur', tone: 'blue' },
-  mauvais_payeur: { label: 'Mauvais payeur', tone: 'red' },
-  nouveau: { label: 'Nouveau', tone: 'slate' },
-}
 
 const TYPES_DOCUMENT = [
   { value: 'carte_identite', label: "Pièce d'identité" },
@@ -72,7 +50,7 @@ export default function DossierLocataire({ locataireId, onBack }) {
   const docsLocataire = state.documents.filter((d) => d.locataireId === locataireId)
   const edlBail = bail ? state.etatsDesLieux.filter((e) => e.bailId === bail.id) : []
   const travauxBien = bien ? state.travaux.filter((t) => t.bienId === bien.id) : []
-  const messagesLocataire = [...state.messages].filter((m) => m.locataireId === locataireId).sort((a, b) => new Date(b.date) - new Date(a.date))
+  const messagesLocataire = state.messages.filter((m) => m.locataireId === locataireId).sort((a, b) => new Date(b.date) - new Date(a.date))
 
   const paiementMoisCourant = useMemo(() => {
     if (!bail) return null
@@ -96,7 +74,7 @@ export default function DossierLocataire({ locataireId, onBack }) {
     )
   }
 
-  const statutInfo = STATUTS_LOCATAIRE[locataire.statut] || STATUTS_LOCATAIRE.nouveau
+  const statutInfo = statutLocataireInfo(locataire.statut)
 
   function importerDocument(e) {
     const file = e.target.files?.[0]
@@ -153,7 +131,7 @@ export default function DossierLocataire({ locataireId, onBack }) {
     if (!bail) return
     const montantAttendu = Number(bail.loyer) + Number(bail.charges)
     const montantDu = montantAttendu - Number(paiementMoisCourant?.montantPaye || 0)
-    const texte = texteRappel(locataire, montantDu, labelMois(moisCourant()))
+    const texte = texteRappelLoyer(locataire, montantDu, labelMois(moisCourant()))
     messages.add({
       locataireId,
       destinataire: 'locataire',

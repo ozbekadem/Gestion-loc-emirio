@@ -1,19 +1,13 @@
 import React, { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, PageHeader, StatCard, Select } from '../components/ui.jsx'
-import { formatMontant, MOIS_FR } from '../lib/utils.js'
+import { formatMontant, MOIS_FR, immeubleDuBail } from '../lib/utils.js'
 
 function anneesDisponibles(paiements, travaux) {
   const annees = new Set([new Date().getFullYear()])
   paiements.forEach((p) => annees.add(Number(p.mois.split('-')[0])))
   travaux.forEach((t) => t.date && annees.add(new Date(t.date).getFullYear()))
   return [...annees].sort((a, b) => b - a)
-}
-
-function immeubleDuBail(state, bailId) {
-  const bail = state.baux.find((b) => b.id === bailId)
-  const bien = bail ? state.biens.find((b) => b.id === bail.bienId) : null
-  return bien?.immeubleId || null
 }
 
 function immeubleDuTravail(t) {

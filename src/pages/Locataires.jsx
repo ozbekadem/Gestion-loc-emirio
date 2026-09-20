@@ -1,15 +1,8 @@
 import React, { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Select, Textarea, EmptyState, Badge } from '../components/ui.jsx'
-import { formatDate, moisCourant, statutPaiementInfo } from '../lib/utils.js'
+import { formatDate, moisCourant, statutPaiementInfo, STATUTS_LOCATAIRE, statutLocataireInfo } from '../lib/utils.js'
 import DossierLocataire from './DossierLocataire.jsx'
-
-const STATUTS = [
-  { value: 'excellent_payeur', label: 'Excellent payeur', tone: 'green' },
-  { value: 'bon_payeur', label: 'Bon payeur', tone: 'blue' },
-  { value: 'mauvais_payeur', label: 'Mauvais payeur', tone: 'red' },
-  { value: 'nouveau', label: 'Nouveau', tone: 'slate' },
-]
 
 const FILTRES_PAIEMENT = [
   { value: '', label: 'Tous les paiements' },
@@ -73,10 +66,6 @@ export default function Locataires() {
     locataires.remove(l.id)
   }
 
-  function statutInfo(v) {
-    return STATUTS.find((s) => s.value === v) || STATUTS[3]
-  }
-
   return (
     <div>
       <PageHeader
@@ -116,7 +105,7 @@ export default function Locataires() {
           {list.map((l) => {
             const bien = state.biens.find((b) => b.id === l.bienId)
             const immeuble = bien ? state.immeubles.find((i) => i.id === bien.immeubleId) : null
-            const info = statutInfo(l.statut)
+            const info = statutLocataireInfo(l.statut)
             const statutPaiement = paiementDuMois.get(l.id)
             const paiementInfo = statutPaiement ? statutPaiementInfo(statutPaiement) : null
             return (
@@ -191,7 +180,7 @@ export default function Locataires() {
               </Field>
               <Field label="Statut">
                 <Select value={modal.values.statut} onChange={(e) => setModal((m) => ({ ...m, values: { ...m.values, statut: e.target.value } }))}>
-                  {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  {STATUTS_LOCATAIRE.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </Select>
               </Field>
             </div>

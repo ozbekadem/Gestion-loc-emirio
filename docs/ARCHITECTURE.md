@@ -63,6 +63,32 @@ Deux actions globales complètent l'API :
   sa valeur ; les collections absentes de `data` sont conservées telles
   quelles. Utilisé pour restaurer une sauvegarde JSON exportée.
 
+### Intégrité référentielle à la suppression
+
+Le store ne connaît pas les relations entre collections (`add`/`update`/
+`remove` sont génériques) : c'est aux pages de décider quoi faire des
+enregistrements qui référencent l'élément supprimé, avant d'appeler
+`remove()`. Deux stratégies coexistent selon la page :
+
+- **Bloquer la suppression** si des enfants existent (`Immeubles.jsx` refuse
+  de supprimer un immeuble tant qu'il contient des biens, ou un bien tant
+  qu'il est occupé).
+- **Avertir puis cascader** quand bloquer serait trop contraignant en usage
+  réel (`Baux.jsx` : supprimer un bail supprime aussi ses `paiements` et
+  `etatsDesLieux`, après confirmation mentionnant le nombre d'enregistrements
+  concernés).
+
+Si vous ajoutez une suppression sur une collection qui sert de "parent" à
+d'autres (un `bailId`, `immeubleId`, `locataireId`, etc. référencé ailleurs),
+choisissez explicitement l'une de ces deux stratégies plutôt que de laisser
+les enfants devenir orphelins. Un enregistrement orphelin silencieux est
+dangereux dès qu'une page agrège des montants en itérant directement sur la
+collection enfant (comme `Reversements.jsx` ou `Comptabilite.jsx` le font
+sur `paiements`) : il continue à être compté dans les totaux financiers
+indéfiniment, sans qu'aucune page ne permette de l'identifier ou de le
+supprimer. C'est exactement le bug qu'a corrigé `Baux.jsx` `remove()` — voir
+`src/pages/Baux.test.jsx` pour la régression associée.
+
 **Règle importante : ne jamais muter `state` directement.** Toute
 modification passe par ces actions, qui déclenchent le reducer et la
 persistance automatique.
