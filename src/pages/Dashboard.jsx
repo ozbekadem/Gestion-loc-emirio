@@ -4,7 +4,7 @@ import { useNavigate } from '../lib/nav.jsx'
 import { Card, PageHeader, StatCard, Button, Badge, EmptyState } from '../components/ui.jsx'
 import { LineChart, DonutChart, chartColor } from '../components/charts.jsx'
 import { formatMontant, formatDate, moisCourant, moisDecale, immeubleDuBail, MOIS_FR } from '../lib/utils.js'
-import { getTaches } from '../lib/taches.js'
+import { getTaches, joursAvant } from '../lib/taches.js'
 
 const URGENCE_TONE = { haute: 'red', moyenne: 'amber', basse: 'slate' }
 const STATUT_TRAVAUX_LABEL = { a_planifier: 'à planifier', en_cours: 'en cours', termine: 'terminé' }
@@ -105,10 +105,14 @@ export default function Dashboard() {
     return items.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6)
   }, [paiements, baux, locataires, travaux, messages])
 
+  // Une échéance "à venir" suppose une date de fin renseignée et proche (même
+  // fenêtre de 90 jours que la règle `echeance_bail` du moteur de tâches) :
+  // un bail actif sans date de fin n'a, par définition, aucune échéance à
+  // afficher ici.
   const prochainesEcheances = useMemo(
     () =>
       [...baux]
-        .filter((b) => b.statut === 'actif')
+        .filter((b) => b.statut === 'actif' && b.dateFin && joursAvant(b.dateFin) >= 0 && joursAvant(b.dateFin) <= 90)
         .sort((a, b) => new Date(a.dateFin) - new Date(b.dateFin))
         .slice(0, 5),
     [baux],
@@ -259,7 +263,7 @@ export default function Dashboard() {
         <Card className="lg:col-span-2">
           <h2 className="mb-4 text-base font-semibold text-slate-900">Échéances de bail à venir</h2>
           {prochainesEcheances.length === 0 ? (
-            <EmptyState title="Aucun bail actif" subtitle="Ajoutez un locataire et un bail pour commencer le suivi." />
+            <EmptyState title="Aucune échéance dans les 90 prochains jours" subtitle="Les baux actifs dont la date de fin approche apparaîtront ici." />
           ) : (
             <div className="divide-y divide-slate-100">
               {prochainesEcheances.map((b) => {

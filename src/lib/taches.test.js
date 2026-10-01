@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getTaches, itemsAdminBail, CHECKLIST_ADMIN } from './taches.js'
+import { getTaches, itemsAdminBail, joursAvant, CHECKLIST_ADMIN } from './taches.js'
 
 const JOUR_MS = 24 * 60 * 60 * 1000
 
@@ -145,6 +145,68 @@ describe('getTaches — reversements en attente', () => {
       paiements: [{ ...paiementDeBase, statut: 'retard', datePaiement: ilYA(30) }],
     })
     expect(getTaches(state).find((t) => t.type === 'reversement_en_attente')).toBeUndefined()
+  })
+})
+
+describe('getTaches — loyers en retard', () => {
+  const paiementRetard = {
+    id: 'p-retard',
+    bailId: 'bail-1',
+    mois: '2026-07',
+    montantAttendu: 820,
+    montantPaye: 0,
+    statut: 'retard',
+  }
+
+  it('signale un loyer en retard en urgence haute avec le solde restant dû', () => {
+    const state = buildState({
+      baux: [bailAJour],
+      locataires: [locataire],
+      biens: [bien],
+      immeubles: [immeuble],
+      paiements: [paiementRetard],
+    })
+    const tache = getTaches(state).find((t) => t.type === 'loyer_en_retard')
+    expect(tache).toBeDefined()
+    expect(tache.urgence).toBe('haute')
+    expect(tache.titre).toContain('Julie Dupuis')
+    expect(tache.detail).toContain('820')
+  })
+
+  it('signale un loyer partiellement payé en urgence moyenne', () => {
+    const state = buildState({
+      baux: [bailAJour],
+      locataires: [locataire],
+      biens: [bien],
+      immeubles: [immeuble],
+      paiements: [{ ...paiementRetard, statut: 'partiel', montantPaye: 300 }],
+    })
+    const tache = getTaches(state).find((t) => t.type === 'loyer_en_retard')
+    expect(tache).toBeDefined()
+    expect(tache.urgence).toBe('moyenne')
+    expect(tache.detail).toContain('520') // 820 - 300 restant dû
+  })
+
+  it('ignore les paiements "payé" ou "attendu"', () => {
+    const state = buildState({
+      baux: [bailAJour],
+      locataires: [locataire],
+      biens: [bien],
+      immeubles: [immeuble],
+      paiements: [{ ...paiementRetard, statut: 'paye', montantPaye: 820 }, { ...paiementRetard, id: 'p2', statut: 'attendu' }],
+    })
+    expect(getTaches(state).find((t) => t.type === 'loyer_en_retard')).toBeUndefined()
+  })
+})
+
+describe('joursAvant', () => {
+  it('retourne un nombre positif pour une date future', () => {
+    expect(joursAvant(dans(10))).toBeGreaterThanOrEqual(9)
+  })
+
+  it('retourne -Infinity pour une date absente', () => {
+    expect(joursAvant(undefined)).toBe(-Infinity)
+    expect(joursAvant('')).toBe(-Infinity)
   })
 })
 

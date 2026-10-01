@@ -1,4 +1,4 @@
-import { labelMois } from './utils.js'
+import { formatMontant, labelMois } from './utils.js'
 
 const JOUR_MS = 24 * 60 * 60 * 1000
 
@@ -9,7 +9,10 @@ function joursDepuis(dateStr) {
   return Math.floor((Date.now() - d.getTime()) / JOUR_MS)
 }
 
-function joursAvant(dateStr) {
+// Exportée pour que les pages (ex. le Dashboard) puissent appliquer la même
+// notion d'échéance "à venir" que le moteur de tâches, plutôt que de
+// redéfinir leur propre calcul de jours restants.
+export function joursAvant(dateStr) {
   if (!dateStr) return -Infinity
   const d = new Date(dateStr)
   if (Number.isNaN(d.getTime())) return -Infinity
@@ -57,6 +60,26 @@ export function getTaches(state) {
       lieu: immeuble?.nom,
       immeubleId: immeuble?.id,
       page: 'reversements',
+    })
+  })
+
+  state.paiements.forEach((p) => {
+    if (p.statut !== 'retard' && p.statut !== 'partiel') return
+    const bail = state.baux.find((b) => b.id === p.bailId)
+    const loc = bail ? state.locataires.find((l) => l.id === bail.locataireId) : null
+    const bien = bail ? state.biens.find((x) => x.id === bail.bienId) : null
+    const immeuble = bien ? state.immeubles.find((i) => i.id === bien.immeubleId) : null
+    const nomLoc = loc ? `${loc.prenom} ${loc.nom}` : 'Locataire inconnu'
+    const soldeRestant = Number(p.montantAttendu || 0) - Number(p.montantPaye || 0)
+    taches.push({
+      id: `loyer-retard-${p.id}`,
+      type: 'loyer_en_retard',
+      urgence: p.statut === 'retard' ? 'haute' : 'moyenne',
+      titre: `Loyer ${p.statut === 'retard' ? 'impayé' : 'partiellement payé'} — ${nomLoc}`,
+      detail: `${labelMois(p.mois)} — ${formatMontant(soldeRestant)} restant dû`,
+      lieu: [immeuble?.nom, bien?.nom].filter(Boolean).join(' — '),
+      locataireId: bail?.locataireId,
+      page: 'paiements',
     })
   })
 
