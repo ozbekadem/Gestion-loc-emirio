@@ -249,6 +249,46 @@ function notifierProprietaire(sinistre) {
 }
 ```
 
+## La page Paiements : trois vues sur les mêmes données
+
+`Paiements.jsx` propose trois onglets, tous construits sur `state.baux`
+(actifs) et `state.paiements`, mais pensés pour des usages différents :
+
+- **Vue d'ensemble** (`src/components/VuePortefeuille.jsx`, onglet par
+  défaut) — une ligne par locataire, avec une frise des 6 derniers mois
+  **déjà clos**, un anneau de taux de recouvrement et un bouton "Relancer"
+  qui n'apparaît que s'il y a vraiment un mois à problème. Pensée pour un
+  coup d'œil rapide sur tout le portefeuille.
+- **Vue mensuelle** — le détail d'un seul mois choisi (navigation ←/→),
+  pour enregistrer un paiement ou marquer un reversement.
+- **Grille annuelle** (`GrillePaiements.jsx`) — les 12 mois d'une année
+  choisie, pour visualiser l'historique complet d'un bail.
+
+### Pourquoi "6 derniers mois clos" et jamais le mois en cours
+
+Comme le Dashboard ("le mois en cours est encore incomplet : les paiements
+pas tous saisis"), la Vue d'ensemble ne juge jamais le mois en cours — il
+n'est pas encore échu, donc jamais "en retard" dès le 1er jour du mois.
+`moisClosRecents()` (dans `VuePortefeuille.jsx`) construit la fenêtre en
+partant de `moisDecale(moisCourant(), -1)` et en remontant. Toute nouvelle
+vue agrégée sur plusieurs mois devrait suivre la même règle plutôt que
+d'inclure le mois courant dans son dénominateur.
+
+### Helpers partagés (`src/lib/utils.js`)
+
+- `anneesDisponibles(baux, paiements)` — les années à proposer dans un
+  sélecteur (année courante + toute année couverte par un bail ou un
+  paiement). Utilisé par `GrillePaiements.jsx`.
+- `agregerPaiementsPeriode(montantAttendu, paiementsParMois, moisKeys)` —
+  additionne attendu/encaissé sur une liste de mois ("AAAA-MM"), et signale
+  `hasRetard` (un paiement explicitement "retard") séparément de
+  `hasManque` (un mois jamais saisi, ou payé partiellement) : un vrai
+  retard confirmé et une saisie simplement en attente ne méritent pas la
+  même couleur d'alerte.
+- `dernierMoisProbleme(paiementsParMois, moisKeys)` — le mois le plus
+  récent qui mérite une relance, pour ne jamais relancer sur un mois déjà
+  réglé alors qu'un mois plus ancien a un problème.
+
 ## Découper une page volumineuse en sous-composants
 
 `DossierLocataire.jsx` est composé de plusieurs sections indépendantes

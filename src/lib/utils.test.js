@@ -6,6 +6,9 @@ import {
   labelMois,
   moisDecale,
   immeubleDuBail,
+  anneesDisponibles,
+  agregerPaiementsPeriode,
+  dernierMoisProbleme,
   createStatutLookup,
   statutPaiementInfo,
   calculerStatutPaiement,
@@ -136,6 +139,87 @@ describe('calculerStatutPaiement', () => {
   it('retourne "paye" si le montant payé atteint ou dépasse le montant attendu', () => {
     expect(calculerStatutPaiement(800, 800)).toBe('paye')
     expect(calculerStatutPaiement(900, 800)).toBe('paye')
+  })
+})
+
+describe('anneesDisponibles', () => {
+  it('inclut toujours l\'année courante', () => {
+    expect(anneesDisponibles([], [])).toContain(new Date().getFullYear())
+  })
+
+  it("couvre les dates de début/fin de bail et les mois de paiement", () => {
+    const annees = anneesDisponibles(
+      [{ dateDebut: '2022-03-01', dateFin: '2024-02-28' }],
+      [{ mois: '2023-11' }],
+    )
+    expect(annees).toContain(2022)
+    expect(annees).toContain(2024)
+    expect(annees).toContain(2023)
+  })
+
+  it('trie du plus récent au plus ancien', () => {
+    const annees = anneesDisponibles([{ dateDebut: '2020-01-01' }], [])
+    expect(annees).toEqual([...annees].sort((a, b) => b - a))
+  })
+})
+
+describe('agregerPaiementsPeriode', () => {
+  it('additionne attendu et encaissé sur les mois fournis', () => {
+    const paiements = {
+      '2026-06': { statut: 'paye', montantPaye: 820 },
+      '2026-08': { statut: 'paye', montantPaye: 820 },
+      '2026-09': { statut: 'paye', montantPaye: 820 },
+    }
+    const r = agregerPaiementsPeriode(820, paiements, ['2026-06', '2026-07', '2026-08', '2026-09'])
+    expect(r.totalAttendu).toBe(3280)
+    expect(r.totalEncaisse).toBe(2460)
+    expect(r.pct).toBe(75)
+  })
+
+  it('signale hasRetard pour un paiement explicitement en retard', () => {
+    const r = agregerPaiementsPeriode(800, { '2026-07': { statut: 'retard' } }, ['2026-07'])
+    expect(r.hasRetard).toBe(true)
+    expect(r.totalEncaisse).toBe(0)
+  })
+
+  it('signale hasManque pour un mois sans paiement saisi ou un paiement partiel', () => {
+    const sansSaisie = agregerPaiementsPeriode(800, {}, ['2026-07'])
+    expect(sansSaisie.hasManque).toBe(true)
+    expect(sansSaisie.hasRetard).toBe(false)
+
+    const partiel = agregerPaiementsPeriode(800, { '2026-07': { statut: 'partiel', montantPaye: 400 } }, ['2026-07'])
+    expect(partiel.hasManque).toBe(true)
+    expect(partiel.totalEncaisse).toBe(400)
+  })
+
+  it('retourne pct null quand aucun mois n\'est fourni (rien n\'est encore dû)', () => {
+    expect(agregerPaiementsPeriode(800, {}, []).pct).toBeNull()
+  })
+
+  it('retourne 100% quand tout est payé', () => {
+    const paiements = { '2026-06': { statut: 'paye', montantPaye: 700 } }
+    expect(agregerPaiementsPeriode(700, paiements, ['2026-06']).pct).toBe(100)
+  })
+})
+
+describe('dernierMoisProbleme', () => {
+  it('retourne le mois le plus récent sans paiement saisi', () => {
+    const mois = dernierMoisProbleme({ '2026-06': { statut: 'paye' } }, ['2026-06', '2026-07', '2026-08'])
+    expect(mois).toBe('2026-08')
+  })
+
+  it('retourne le mois le plus récent en retard ou partiel, même si des mois plus récents sont payés', () => {
+    const paiements = {
+      '2026-06': { statut: 'paye' },
+      '2026-07': { statut: 'retard' },
+      '2026-08': { statut: 'paye' },
+    }
+    expect(dernierMoisProbleme(paiements, ['2026-06', '2026-07', '2026-08'])).toBe('2026-07')
+  })
+
+  it('retourne null quand tout est payé', () => {
+    const paiements = { '2026-06': { statut: 'paye' }, '2026-07': { statut: 'paye' } }
+    expect(dernierMoisProbleme(paiements, ['2026-06', '2026-07'])).toBeNull()
   })
 })
 

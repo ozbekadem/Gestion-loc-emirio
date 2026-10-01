@@ -2,13 +2,14 @@ import React, { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, PageHeader, Button, Modal, Field, Input, Badge, EmptyState } from '../components/ui.jsx'
 import GrillePaiements from '../components/GrillePaiements.jsx'
+import VuePortefeuille from '../components/VuePortefeuille.jsx'
 import { formatMontant, formatDate, labelMois, moisCourant, moisDecale, statutPaiementInfo, calculerStatutPaiement, montantAReverser, statutReversement, STATUTS_REVERSEMENT, texteRappelLoyer } from '../lib/utils.js'
 import { useConfirm } from '../lib/confirm.jsx'
 
 export default function Paiements() {
   const { state, paiements, messages } = useStore()
   const confirm = useConfirm()
-  const [onglet, setOnglet] = useState('mois')
+  const [onglet, setOnglet] = useState('portefeuille')
   const [mois, setMois] = useState(moisCourant())
   const [modal, setModal] = useState(null)
   const [rappel, setRappel] = useState(null)
@@ -121,6 +122,12 @@ export default function Paiements() {
 
       <div className="mb-6 flex gap-2 border-b border-slate-200">
         <button
+          onClick={() => setOnglet('portefeuille')}
+          className={`border-b-2 px-3 py-2 text-sm font-medium ${onglet === 'portefeuille' ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+        >
+          Vue d'ensemble
+        </button>
+        <button
           onClick={() => setOnglet('mois')}
           className={`border-b-2 px-3 py-2 text-sm font-medium ${onglet === 'mois' ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
         >
@@ -134,7 +141,9 @@ export default function Paiements() {
         </button>
       </div>
 
-      {onglet === 'grille' ? (
+      {onglet === 'portefeuille' ? (
+        <VuePortefeuille />
+      ) : onglet === 'grille' ? (
         <GrillePaiements />
       ) : (
         <>

@@ -1,20 +1,10 @@
 import React, { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { Card, Button, Modal, Field, Input, Select } from './ui.jsx'
-import { formatMontant, formatDate, MOIS_FR, STATUTS_PAIEMENT, statutPaiementInfo } from '../lib/utils.js'
+import { formatMontant, formatDate, MOIS_FR, STATUTS_PAIEMENT, statutPaiementInfo, anneesDisponibles } from '../lib/utils.js'
 
 const MOIS_ABREGES = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
 const TRIMESTRES = ['1er trimestre', '2e trimestre', '3e trimestre', '4e trimestre']
-
-function anneesDisponibles(baux, paiements) {
-  const annees = new Set([new Date().getFullYear()])
-  baux.forEach((b) => {
-    if (b.dateDebut) annees.add(new Date(b.dateDebut).getFullYear())
-    if (b.dateFin) annees.add(new Date(b.dateFin).getFullYear())
-  })
-  paiements.forEach((p) => annees.add(Number(p.mois.split('-')[0])))
-  return [...annees].sort((a, b) => b - a)
-}
 
 export default function GrillePaiements() {
   const { state, paiements } = useStore()

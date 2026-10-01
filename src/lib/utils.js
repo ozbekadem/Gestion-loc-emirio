@@ -67,6 +67,57 @@ export function calculerStatutPaiement(montantPaye, montantAttendu) {
   return 'paye'
 }
 
+// Liste des années à proposer dans un sélecteur : l'année courante, plus
+// toute année couverte par un bail ou un paiement existant.
+export function anneesDisponibles(baux, paiements) {
+  const annees = new Set([new Date().getFullYear()])
+  baux.forEach((b) => {
+    if (b.dateDebut) annees.add(new Date(b.dateDebut).getFullYear())
+    if (b.dateFin) annees.add(new Date(b.dateFin).getFullYear())
+  })
+  paiements.forEach((p) => annees.add(Number(p.mois.split('-')[0])))
+  return [...annees].sort((a, b) => b - a)
+}
+
+// Agrège les paiements d'un bail sur une liste de mois ("AAAA-MM") déjà
+// entamés, pour une vue consolidée façon "portefeuille". `paiementsParMois`
+// associe une clé mois à son paiement (ou rien si aucun n'a été saisi).
+export function agregerPaiementsPeriode(montantAttendu, paiementsParMois, moisKeys) {
+  let totalAttendu = 0
+  let totalEncaisse = 0
+  let hasRetard = false
+  let hasManque = false
+  moisKeys.forEach((mois) => {
+    totalAttendu += montantAttendu
+    const p = paiementsParMois[mois]
+    if (!p) {
+      hasManque = true
+      return
+    }
+    if (p.statut === 'retard') {
+      hasRetard = true
+      return
+    }
+    if (p.statut === 'paye' || p.statut === 'partiel') {
+      totalEncaisse += Number(p.montantPaye) || 0
+      if (p.statut === 'partiel') hasManque = true
+    }
+  })
+  const pct = totalAttendu ? Math.round((totalEncaisse / totalAttendu) * 100) : null
+  return { totalAttendu, totalEncaisse, pct, hasRetard, hasManque }
+}
+
+// Le mois le plus récent qui mérite une relance (impayé, partiel, ou jamais
+// saisi) parmi une liste de mois déjà entamés triée chronologiquement.
+export function dernierMoisProbleme(paiementsParMois, moisKeys) {
+  for (let i = moisKeys.length - 1; i >= 0; i--) {
+    const mois = moisKeys[i]
+    const p = paiementsParMois[mois]
+    if (!p || p.statut === 'retard' || p.statut === 'partiel') return mois
+  }
+  return null
+}
+
 export const STATUTS_LOCATAIRE = [
   { value: 'excellent_payeur', label: 'Excellent payeur', tone: 'green' },
   { value: 'bon_payeur', label: 'Bon payeur', tone: 'blue' },
