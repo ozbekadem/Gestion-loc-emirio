@@ -97,10 +97,10 @@ export default function VuePortefeuille() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <p className="text-sm text-slate-500">Les {FENETRE_MOIS} derniers mois clos : <span className="font-medium text-slate-700">{periodeLabel}</span></p>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="min-w-0 text-sm text-slate-500">Les {FENETRE_MOIS} derniers mois clos : <span className="font-medium text-slate-700">{periodeLabel}</span></p>
         {state.immeubles.length > 0 && (
-          <Select value={filtreImmeuble} onChange={(e) => setFiltreImmeuble(e.target.value)} className="ml-auto max-w-xs">
+          <Select value={filtreImmeuble} onChange={(e) => setFiltreImmeuble(e.target.value)} className="sm:max-w-xs">
             <option value="">Tous les immeubles</option>
             {state.immeubles.map((im) => <option key={im.id} value={im.id}>{im.nom}</option>)}
           </Select>
@@ -122,7 +122,7 @@ export default function VuePortefeuille() {
             const ringTone = l.pct === 100 ? 'text-accent-600' : l.hasRetard ? 'text-danger-500' : l.hasManque ? 'text-warning-500' : 'text-success-500'
             return (
               <div key={l.bail.id} className="flex flex-wrap items-center gap-4 px-4 py-4 hover:bg-slate-50">
-                <div className="flex min-w-[190px] flex-1 items-center gap-3">
+                <div className="flex w-full items-center gap-3 sm:w-auto sm:min-w-[190px] sm:flex-1">
                   <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${AVATAR_TONES[idx % AVATAR_TONES.length]}`}>
                     {initiales(l.loc)}
                   </span>
@@ -132,7 +132,7 @@ export default function VuePortefeuille() {
                   </div>
                 </div>
 
-                <div className="group relative flex min-w-[180px] flex-[2] gap-[3px]">
+                <div className="group relative flex w-full gap-[3px] sm:w-auto sm:min-w-[180px] sm:flex-[2]">
                   {moisEcoules.map((mois) => {
                     const p = l.paiementsParMois[mois]
                     const info = statutPaiementInfo(p?.statut || 'attendu')
@@ -162,7 +162,7 @@ export default function VuePortefeuille() {
                   )}
                 </div>
 
-                <div className="flex min-w-[230px] flex-1 items-center justify-end gap-4">
+                <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:min-w-[230px] sm:flex-1 sm:flex-nowrap sm:justify-end sm:gap-4">
                   <Badge tone={notation.tone}>{notation.label}</Badge>
                   <div className="text-right text-sm">
                     <p className="font-semibold text-slate-800">{formatMontant(l.totalEncaisse)}</p>

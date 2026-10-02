@@ -87,7 +87,16 @@ docs/
 ## Architecture
 
 - **React 18 + Vite** pour le build et le serveur de dev, **Tailwind CSS**
-  pour le style (palette de marque personnalisée dans `tailwind.config.js`).
+  pour le style. La palette, la typographie (Plus Jakarta Sans) et les
+  rayons/ombres suivent le design system **Clarté** (soft UI à cartes,
+  mobile-first) — voir
+  [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#design-system--clarté) pour
+  le détail et la correspondance entre les jetons Clarté et
+  `tailwind.config.js`.
+- **Navigation mobile** : une barre d'onglets flottante en bas de l'écran
+  (4 destinations + « Plus », icônes [Lucide](https://lucide.dev)) sur
+  téléphone/tablette ; une colonne de navigation classique sur ordinateur
+  (≥ 1024px). Voir `App.jsx`.
 - **State management** : un unique reducer (`src/lib/store.jsx`) expose,
   pour chaque collection de données (`immeubles`, `locataires`, `baux`,
   `paiements`, ...), des actions `add` / `update` / `remove` via le hook

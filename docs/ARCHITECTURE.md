@@ -249,6 +249,67 @@ function notifierProprietaire(sinistre) {
 }
 ```
 
+## Design system : "Clarté"
+
+La palette, la typographie et les rayons/ombres de l'app suivent **Clarté**,
+un design system "soft UI à cartes" mobile-first partagé avec un autre
+projet (Prospect'Immo). Plutôt que de renommer des classes dans chaque
+page, les jetons Clarté sont appliqués **par-dessus les noms de couleurs
+Tailwind déjà utilisés partout** (`tailwind.config.js`) :
+
+| Jeton Clarté | Jeton Tailwind (ce projet) | Rôle |
+| --- | --- | --- |
+| `primaire` / `primaire-2` | `brand-600` / `brand-400` | Dégradé principal (`bg-gradient-brand`), une seule action principale par écran |
+| `primaire-doux` / `primaire-texte` | `brand-50` / `brand-700` | Élément actif sans crier (onglet actif, badge "blue") |
+| `suivi-vert` | `success-500` | À jour / payé |
+| `suivi-orange` | `warning-500` | Partiel / à traiter |
+| `suivi-rouge` | `danger-500` | En retard (valeur déjà identique au précédent jeton) |
+| `fond` / `surface-2` / `bord` / `doux` / `texte` | `slate-50` / `slate-100` / `slate-200` / `slate-500` / `slate-900` | Neutres de page, champs, séparateurs, texte secondaire/principal |
+| `whatsapp` | `whatsapp-500` (nouveau) | Réservé au bouton de contact WhatsApp (`Travaux.jsx`) |
+
+Changer la **valeur** d'un jeton dans `tailwind.config.js` reskine donc tout
+le site sans toucher une seule page ; `accent` (or/brass) est conservé tel
+quel, Clarté ne définissant pas de second accent et ce ton servant déjà à
+distinguer un signal "parfait" (ex. 100% de recouvrement dans
+`VuePortefeuille.jsx`) d'un succès générique.
+
+Rayons et ombres utilisent directement l'échelle Tailwind par défaut :
+`rounded-3xl` (24px) = `radius-carte` pour les cartes, `rounded-2xl` (16px)
+= `radius-2xl` pour les champs et grands boutons, `rounded-full` =
+`radius-pilule` pour boutons/badges. `shadow-soft`/`shadow-soft-lg` portent
+les valeurs `ombre-carte`/`ombre-flottante` de Clarté.
+
+Composants concernés : tous ceux de `src/components/ui.jsx` (Button, Card,
+Field/Input/Select/Textarea, Badge, Modal, StatCard) — leurs **props
+restent inchangées**, seul le rendu change. Icônes : [Lucide](https://lucide.dev)
+(`lucide-react`), utilisées dans la navigation (`App.jsx`) ; le reste de
+l'app garde des emojis pour l'instant (migration possible page par page).
+
+### Navigation : barre d'onglets mobile / colonne desktop
+
+`App.jsx` suit le composant `BarreOnglets` de Clarté : sur téléphone/tablette
+(< 1024px), une barre flottante fixée en bas regroupe les 4 destinations les
+plus utilisées au quotidien (Accueil, Paiements, Locataires, Tâches) ; le
+5ᵉ bouton **"Plus"** ouvre une feuille listant tous les autres modules,
+groupés comme la colonne desktop. Sur ordinateur (≥ 1024px), la navigation
+reste une colonne classique à gauche affichant tout (pas seulement les 4
+raccourcis), puisque l'espace ne manque pas.
+
+### Limite connue : tableaux denses vs. "une carte = un sujet"
+
+Clarté préconise des listes en cartes (une vignette, un nom, une ligne
+`doux`, une action ronde). La plupart des pages de gestion
+(`Baux.jsx`, `Sinistres.jsx`, `Prestataires.jsx`, ...) utilisent encore des
+`<table>` HTML classiques : elles héritent de la nouvelle palette et des
+nouveaux boutons/badges automatiquement, mais pas de la mise en page en
+cartes. Convertir une page de ce type suit le même patron que
+`VuePortefeuille.jsx` (`src/pages/Paiements.jsx`) : une carte par ligne,
+`divide-y divide-slate-100` pour les séparateurs, et un `flex-wrap` avec
+des contraintes `min-w-[...]` déplacées derrière `sm:` pour rester
+utilisable à largeur téléphone (voir le correctif apporté à ce fichier :
+un bloc sans `sm:` devant son `min-w` déborde horizontalement sur petit
+écran).
+
 ## La page Paiements : trois vues sur les mêmes données
 
 `Paiements.jsx` propose trois onglets, tous construits sur `state.baux`

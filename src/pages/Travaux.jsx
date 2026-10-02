@@ -314,7 +314,7 @@ export default function Travaux() {
                   href={lienWhatsapp(contact.prestataire.telephone, contact.texte)}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-accent px-4 py-2 text-sm font-medium text-white shadow-soft transition-all duration-150 hover:shadow-glow-accent hover:brightness-110 active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-whatsapp px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-150 hover:shadow-glow-whatsapp hover:brightness-110 active:scale-[0.97]"
                 >
                   Envoyer par WhatsApp
                 </a>
@@ -322,7 +322,7 @@ export default function Travaux() {
               {contact.prestataire.email && (
                 <a
                   href={lienEmail(contact.prestataire.email, `Intervention — ${contact.travail.titre}`, contact.texte)}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all duration-150 hover:border-brand-200 hover:bg-brand-50/60 hover:text-brand-700 active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-soft transition-all duration-150 hover:border-brand-200 hover:bg-brand-50/60 hover:text-brand-700 active:scale-[0.97]"
                 >
                   Envoyer par e-mail
                 </a>

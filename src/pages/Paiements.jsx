@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
-import { Card, PageHeader, Button, Modal, Field, Input, Badge, EmptyState } from '../components/ui.jsx'
+import { Card, PageHeader, Button, Modal, Field, Input, Select, Badge, EmptyState } from '../components/ui.jsx'
 import GrillePaiements from '../components/GrillePaiements.jsx'
 import VuePortefeuille from '../components/VuePortefeuille.jsx'
 import { formatMontant, formatDate, labelMois, moisCourant, moisDecale, statutPaiementInfo, calculerStatutPaiement, montantAReverser, statutReversement, STATUTS_REVERSEMENT, texteRappelLoyer } from '../lib/utils.js'
@@ -162,14 +162,10 @@ export default function Paiements() {
                 className="max-w-sm"
               />
               {state.immeubles.length > 0 && (
-                <select
-                  value={filtreImmeuble}
-                  onChange={(e) => setFiltreImmeuble(e.target.value)}
-                  className="max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                >
+                <Select value={filtreImmeuble} onChange={(e) => setFiltreImmeuble(e.target.value)} className="max-w-xs">
                   <option value="">Tous les immeubles</option>
                   {state.immeubles.map((im) => <option key={im.id} value={im.id}>{im.nom}</option>)}
-                </select>
+                </Select>
               )}
             </div>
           )}
